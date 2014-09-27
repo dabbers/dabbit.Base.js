@@ -1,4 +1,4 @@
-﻿var System = require("../../System")(__dirname + "/../../System");
+﻿var System = require("all")("System");
 var Server = {}; //require("./Server");
 var Topic = require("./Topic");
 
@@ -14,15 +14,17 @@ function Channel(svr) {
     this.Modes = [];
     this.Users = [];
 
+    // Public getter for Display
     this.__defineGetter__("Display", function(){
         return this.Name;
     });
     var display = String.Empty;
 
+    // Public getter for Created (datetime)
     this.__defineGetter__("Created", function(){
-        return created;
+        return created.Value;
     });
-    var created = new Date();
+    var created = new System.Javascript.CheckedProperty(new Date(), System.Typeof(Date));
 
     this.__defineGetter__("ServerOf", function(){
         return server.Value;
@@ -33,10 +35,10 @@ function Channel(svr) {
     });
 
     this.__defineGetter__("Topic", function(){
-        return !String.IsNullOrEmpty(this.Name) && this.Modes.length != 0 && this.Users.length != 0 && !String.IsNullOrEmpty(this.Display);
+        return topic.Value;
     });
-    this.__defineSetter__("Topic", function(){
-        return !String.IsNullOrEmpty(this.Name) && this.Modes.length != 0 && this.Users.length != 0 && !String.IsNullOrEmpty(this.Display);
+    this.__defineSetter__("Topic", function(val){
+        topic.Value = val;
     });
     var topic = new System.Javascript.CheckedProperty(new Topic(), System.Typeof(Topic));
 
