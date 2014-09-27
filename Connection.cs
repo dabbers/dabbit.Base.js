@@ -1,38 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading;
-using System.IO;
-
-namespace dabbit.Base
-{
-
-
-    internal delegate void RawMessageReceived(Message msg);
-
-    /// <summary>
-    /// An exception thrown when a port number < 1 or > 65000 is passed
-    /// </summary>
-    public class InvalidPortException : Exception
-    {
-        public int Port;
-
-        public InvalidPortException(int port)
-            : base("Invalid port: " + port)
-        {
-            this.Port = port;
-        }
-    }
-
-    public class AlreadyConnectedException : Exception
-    {
-        public AlreadyConnectedException()
-            : base("Cannot connect to the server when there is already a connection")
-        { }
-    }
-
-    public /*abstract*/ class Connection
+﻿    public /*abstract*/ class Connection
     {
         public string Host { get { return this.socketWrapper.Host; } }
         public int Port { get { return this.socketWrapper.Port; } }
@@ -77,26 +43,6 @@ namespace dabbit.Base
 
             this.socketWrapper = this.ctx.CreateSocket(this.socketWrapper.Host, this.socketWrapper.Port, this.socketWrapper.Secure);
         }
-
-        // I don't remember why we needed the reader and writer now...
-        // TODO Not needed anymore?
-        /*
-        public StreamReader Reader 
-        {
-            get
-            {
-                return this.socketWrapper.Reader;
-            }
-        }
-        
-        public StreamWriter Writer 
-        {
-            get
-            {
-                return this.socketWrapper.Writer;
-            }
-        }
-        */
 
         /// <summary>
         /// This is called to return a single message from the stack. By default this doesn't run in
