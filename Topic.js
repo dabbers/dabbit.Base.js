@@ -6,3 +6,5 @@ function Topic() {
         this.DateSet = new Date();
 }
 System.Javascript.Inherit(System.Object, Topic);
+
+module.exports = Topic;
