@@ -5,6 +5,7 @@ var SourceEntity = require('./SourceEntity');
 var SourceEntityType = require('./SourceEntityType');
 
 function Connection(inCtx, socket) {
+    System.Object.call(this);
 
     var messages = []; // new Stack<Message>();
     var ctx = new CheckedProperty(undefined, System.Typeof(Context));
@@ -143,10 +144,8 @@ function Connection(inCtx, socket) {
         socketWrapper.Value.Writer.WriteLine(message);
         socketWrapper.Value.Writer.Flush();
     }
-
-    
-
 }
+System.Javascript.Inherit(System.Object, Connection);
 
 
 module.exports = Connection;

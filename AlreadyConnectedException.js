@@ -5,7 +5,7 @@ var System = require("all")("System");
 /// </summary>
 function AlreadyConnectedException()
 {
-	System.Exception.Exception.call(this, "Cannot connect to the server when there is already a connection");
+	System.Exception.call(this, "Cannot connect to the server when there is already a connection");
 
 
 }
