@@ -1,5 +1,6 @@
 ﻿var User = require('./User');
 var Connection = require('./Connection');
+var Mode = require('./Mode');
 var Topic = require('./Topic');
 var ServerType = require('./ServerType');
 var RawReplies = require('./RawReplies');
@@ -281,38 +282,36 @@ function Server(ctx, me, connection) {
                     connection.Value.Write("MODE " + jm.Channel);
 
                     this.Channels[msg.Parts[2]] = value;
-
-                    if (value.ChannelLoaded && this.OnNewChannelJoin != null)
-                    {
-                        this.OnNewChannelJoin(this, jm);
-                    }
+                    this.Events.emit('OnNewChannelJoin', this, jm);
                 }
                 else
                 {
-                    User usr = this.ctx.CreateUser();
+                    var usr = ctx.CreateUser(); // User
                     usr.Nick = jm.From.Parts[0];
                     usr.Ident = jm.From.Parts[1];
                     usr.Host = jm.From.Parts[2];
-                    usr.Modes = new List<string>();
+                    usr.Modes = [];
 
-                    this.Channels[jm.Channel].Users.Add(usr);
+                    this.Channels[jm.Channel].Users.push(usr);
 
 
                     this.Channels[jm.Channel].Users.Sort(sortuser);
-                    if (this.OnJoin != null)
-                    {
-                        this.OnJoin(this, jm);
-                    }
+                    this.Events.emit('OnJoin', this, jm);
                     
                 }
                 break;
-            #endregion
-            #region 324 Channel modes (On Join)
-            case "324": // :hyperion.gamergalaxy.net 324 dabbbb #dab +r
-                Channel chnl;
-                this.Channels.TryGetValue(msg.Parts[3], out chnl);
+            // ///
+            // END JOIN
+            // ///
 
-                if (chnl == null)
+            // ***
+            // BEGIN CHANNEL MODES/OnJoin
+            // ***
+            case "324": // :hyperion.gamergalaxy.net 324 dabbbb #dab +r
+                var chnl;
+                this.Channels[msg.Parts[3]] = chnl;
+
+                if (!chnl)
                 {
                     // do nothing because we aren't a member of this channel
                     return;
@@ -320,16 +319,16 @@ function Server(ctx, me, connection) {
 
                 //chnl.Modes = new List<Mode>();
 
-                string modes = msg.Parts[4];
-                int paramidx = 5;
+                var modes = msg.Parts[4];
+                var paramidx = 5;
 
                 // 1 was from the + sign in the model.
-                for (int i = 1; i < modes.Length; i++)
+                for (var i = 1; i < modes.length; i++)
                 {
-                    Mode mode = new Mode();
+                    var mode = new Mode();
 
                     // Is this a mode with a parameter?
-                    if (this.Attributes["CHANMODES_B"].Contains(modes[i].ToString()))
+                    if (this.Attributes["CHANMODES_B"].indexOf(modes[i].toString()) != -1)
                     {
                         mode.Argument = msg.Parts[paramidx++];
                     }
@@ -340,13 +339,16 @@ function Server(ctx, me, connection) {
 
                     mode.Character = modes[i];
                     mode.Type = ModeType.Channel;
-                    chnl.Modes.Add(mode);
+                    chnl.Modes.push(mode);
                 }
 
                 this.Channels[msg.Parts[3]] = chnl;
 
                 break;
-            #endregion
+            // ///
+            // END CHANNEL MODES/OnJoin
+            // ///
+            
             #region 353, 329  Channel Users, channel create (On Join)
             case "329": // navi.gamergalaxy.net 329 dab #TBN 1403649503
                 Channel chan329Val;
