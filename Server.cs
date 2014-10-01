@@ -3,6 +3,7 @@ var Connection = require('./Connection');
 var Mode = require('./Mode');
 var Topic = require('./Topic');
 var ServerType = require('./ServerType');
+var ModeType = require('./ModeType');
 var RawReplies = require('./RawReplies');
 var SourceEntity = require('./SourceEntity');
 var SourceEntityType = require('./SourceEntityType');
@@ -273,7 +274,7 @@ function Server(ctx, me, connection) {
                         value.Users = []
                         value.Topic = new Topic();
 
-                        this.Channels[msg.Parts[2].toLowerCase()] = value;
+                        value = this.Channels[msg.Parts[2].toLowerCase()];
                     }
 
                     value.Name = msg.Parts[2];
@@ -295,7 +296,7 @@ function Server(ctx, me, connection) {
                     this.Channels[jm.Channel].Users.push(usr);
 
 
-                    this.Channels[jm.Channel].Users.Sort(sortuser);
+                    this.Channels[jm.Channel].Users.sort(sortuser);
                     this.Events.emit('OnJoin', this, jm);
                     
                 }
@@ -309,7 +310,7 @@ function Server(ctx, me, connection) {
             // ***
             case "324": // :hyperion.gamergalaxy.net 324 dabbbb #dab +r
                 var chnl;
-                this.Channels[msg.Parts[3]] = chnl;
+                chnl = this.Channels[msg.Parts[3]];
 
                 if (!chnl)
                 {
@@ -343,59 +344,64 @@ function Server(ctx, me, connection) {
                 }
 
                 this.Channels[msg.Parts[3]] = chnl;
+                this.Events.emit('324', this, msg);
 
                 break;
             // ///
             // END CHANNEL MODES/OnJoin
             // ///
-            
-            #region 353, 329  Channel Users, channel create (On Join)
+
+            // ***
+            // BEGIN Channel Users, channel create (On Join)
+            // ***
             case "329": // navi.gamergalaxy.net 329 dab #TBN 1403649503
-                Channel chan329Val;
+                var chan329Val;
 
-                this.Channels.TryGetValue(msg.Parts[3], out chan329Val);
+                chan329Val = this.Channels[msg.Parts[3]];
 
-                if (chan329Val == null)
+                if (!chan329Val) {
                     return;
+                }
 
-                chan329Val.Created = Utility.FromUnixTime(long.Parse(msg.Parts[4]));
+                chan329Val.Created = new Date(msg.Parts[4] * 1000);
+                this.Events.emit('329', this, msg);
 
                 break;
             case "353": // /Names list item :hyperion.gamergalaxy.net 353 badddd = #dab :badddd BB-Aso
                 //msg.Parts[4] = msg.Parts[4].Substring(1);
                 
-                Channel vall;
-                this.Channels.TryGetValue(msg.Parts[4], out vall);
+                var vall;
+                vall = this.Channels[msg.Parts[4]];
 
                 // Should NEVER HAPPEN
-                if (vall == null)
+                if (!vall)
                 {
                     // We don't want to execute this
                     return;
                 }
 
-                if (vall.Users == null)
+                if (!vall.Users)
                 {
-                    vall.Users = new List<User>();
+                    vall.Users = []; // User[]
                 }
 
-                msg.Parts[5] = msg.Parts[5].Substring(1);
-                string prefixes = this.Attributes["PREFIX_PREFIXES"];
+                msg.Parts[5] = msg.Parts[5].substring(1);
+                var prefixes = this.Attributes["PREFIX_PREFIXES"];
 
-                for (int i = 5; i < msg.Parts.Count(); i++)
+                for (var i = 5; i < msg.Parts.length; i++)
                 {
                     if (String.IsNullOrEmpty(msg.Parts[i]))
                         continue;
 
-                    User tempuser = this.ctx.CreateUser();
-                    tempuser.Modes = new List<string>();
+                    User tempuser = ctx.CreateUser();
+                    tempuser.Modes = [];
 
                     if (this.HostInNames)
                     {
-                        string[] nick = msg.Parts[i].Split('!');
+                        var nick = msg.Parts[i].split('!');
                         if (nick.Count() > 1)
                         {
-                            string[] identhost = nick[1].Split('@');
+                            string[] identhost = nick[1].split('@');
                             tempuser.Nick = nick[0];
                             tempuser.Ident = identhost[0];
                             tempuser.Host = identhost[1];
@@ -410,14 +416,14 @@ function Server(ctx, me, connection) {
                         tempuser.Nick = msg.Parts[i];
                     }
                     
-                    while (prefixes.Contains(tempuser.Nick[0].ToString()))
+                    while (prefixes.indexOf(tempuser.Nick[0].toString()) != -1)
                     {
-                        tempuser.Modes.Add(tempuser.Nick[0].ToString());
-                        tempuser.Nick = tempuser.Nick.Substring(1);
+                        tempuser.Modes.push(tempuser.Nick[0].toString());
+                        tempuser.Nick = tempuser.Nick.substring(1);
 
-                        tempuser.Modes.Sort(delegate(string s1, string s2)
+                        tempuser.Modes.sort(delegate(string s1, string s2)
                         {
-                            return prefixes.IndexOf(s1[0]).CompareTo(prefixes.IndexOf(s2[0]));
+                            return prefixes.indexOf(s1[0]) - prefixes.indexOf(s2[0]);
                         });
                     }
                     
@@ -426,47 +432,49 @@ function Server(ctx, me, connection) {
                     //joinmsg.Channel = msg.Parts[3];
 
 
-                    vall.Users.Add(tempuser);
+                    vall.Users.push(tempuser);
 
-                    vall.Users.Sort(sortuser);
+                    vall.Users.sort(sortuser);
                 }
 
 
                 this.Channels[msg.Parts[5]] = vall;
+                this.Events.emit('353', this, msg);
 
                 break;
-            #endregion
-            #region PART
+            // ///
+            // END Channel Users, channel create (On Join)
+            // ///
+
+            // ***
+            // BEGIN PART
+            // ***
             case "PART":
-
                 this.Channels[msg.Parts[2]].Users.Remove
-                    (this.Channels[msg.Parts[2]].Users.Where(u => u.Nick == msg.From.Parts[0]).First());
+                    (this.Channels[msg.Parts[2]].Users.Where(function(u) { return u.Nick == msg.Parts[0] }).First(), 1);
 
-                if (this.OnPart != null)
-                {
-                    this.OnPart(this, msg);
-                }
-
+                this.Events.emit('OnPart', this, msg);
 
                 if (msg.From.Parts[0] == me.Nick)
                 {
-                    this.Channels.Remove(msg.Parts[2]);
-
-                    if (this.OnCloseChannelPart != null)
-                    {
-                        this.OnCloseChannelPart(this, msg);
-                    }
+                    this.Channels.splice(msg.Parts[2], );
+                    this.Events.emit('OnCloseChannelPart', this, msg);
                 }
 
                 break;
-            #endregion
-            #region QUIT
+            // ///
+            // End PART
+            // ///
+            
+            // ***
+            // QUIT
+            // ***
             case "QUIT":
-                List<string> channels = new List<string>();
+                var channels = [];
 
-                foreach (var chn in this.Channels)
+                for (var chn = 0; chn < this.Channels.length; chn++)
                 {
-                    User usr = chn.Value.Users.Where(u => u.Nick == msg.From.Parts[0]).FirstOrDefault();
+                    var usr = chn.Value.Users.Where(u => u.Nick == msg.From.Parts[0]).FirstOrDefault();
 
                     if (usr != null)
                     {
