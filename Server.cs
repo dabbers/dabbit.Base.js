@@ -451,7 +451,7 @@ function Server(ctx, me, connection) {
             // ***
             case "PART":
                 this.Channels[msg.Parts[2]].Users.Remove
-                    (this.Channels[msg.Parts[2]].Users.Where(function(u) { return u.Nick == msg.Parts[0] }).First(), 1);
+                    (this.Channels[msg.Parts[2]].Users.Where(function(u) { return u.Nick == msg.Parts[0] }).First());
 
                 this.Events.emit('OnPart', this, msg);
 
@@ -474,36 +474,40 @@ function Server(ctx, me, connection) {
 
                 for (var chn = 0; chn < this.Channels.length; chn++)
                 {
-                    var usr = chn.Value.Users.Where(u => u.Nick == msg.From.Parts[0]).FirstOrDefault();
+                    var usr = this.Channels[chn].Users.Where(u => u.Nick == msg.From.Parts[0]).FirstOrDefault();
 
                     if (usr != null)
                     {
-                        chn.Value.Users.Remove(usr);
-                        channels.Add(chn.Key);
+                        this.Channels[chn].Users.Remove(usr);
+                        channels.push(chn.Key);
                     }
 
                 }
-                if (this.OnQuit != null)
-                {
-                    this.OnQuit(this, new QuitMessage(msg) { Channels = channels.ToArray() });
-                }
-                
+                var quit = new QuitMessage(msg);
+                quit.Channels = channels;
+
+                this.Events.emit('OnCloseChannelPart', this, quit);
                 break;
-            #endregion
-            #region KICK
+            // ///
+            // END QUIT
+            // ///
+
+            // ***
+            // BEGIN KICK
+            // ***
             case "KICK":
                 // :from kick #channel nick :Reason (optional)
 
-                this.Channels[msg.Parts[2]].Users.Remove(this.Channels[msg.Parts[2]].Users.Where(u => u.Nick == msg.Parts[3]).First());
-
-                if (this.OnKick != null)
-                {
-                    this.OnKick(this, msg);
-                }
-
+                this.Channels[msg.Parts[2]].Users.Remove(this.Channels[msg.Parts[2]].Users.Where(function(u) { return u.Nick == msg.Parts[3]; }).First());
+                this.Events.emit('OnKick', this, msg);
                 break;
-            #endregion
-            #region NICK
+            // ///
+            // END KICK
+            // ///
+
+            // ***
+            // BEGIN NICK
+            // ***
             case "NICK":
                 NickChangeMessage nickmsg = new NickChangeMessage(msg);
                                     
