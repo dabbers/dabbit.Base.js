@@ -3,6 +3,7 @@ var Connection = require('./Connection');
 var Mode = require('./Mode');
 var Topic = require('./Topic');
 var ServerType = require('./ServerType');
+var NickChangeMessage = require('./NickChangeMessage');
 var ModeType = require('./ModeType');
 var RawReplies = require('./RawReplies');
 var SourceEntity = require('./SourceEntity');
@@ -457,7 +458,7 @@ function Server(ctx, me, connection) {
 
                 if (msg.From.Parts[0] == me.Nick)
                 {
-                    this.Channels.splice(msg.Parts[2], );
+                    this.Channels.Remove(this.Channels.Where(function(u) { return u.Name == msg.Parts[2]; }).First());
                     this.Events.emit('OnCloseChannelPart', this, msg);
                 }
 
@@ -472,11 +473,11 @@ function Server(ctx, me, connection) {
             case "QUIT":
                 var channels = [];
 
-                for (var chn = 0; chn < this.Channels.length; chn++)
+                for (var chn in this.Channels)
                 {
-                    var usr = this.Channels[chn].Users.Where(u => u.Nick == msg.From.Parts[0]).FirstOrDefault();
+                    var usr = this.Channels[chn].Users.Where(function(u) {return u.Nick == msg.From.Parts[0]; }).FirstOrDefault();
 
-                    if (usr != null)
+                    if (usr)
                     {
                         this.Channels[chn].Users.Remove(usr);
                         channels.push(chn.Key);
@@ -509,16 +510,16 @@ function Server(ctx, me, connection) {
             // BEGIN NICK
             // ***
             case "NICK":
-                NickChangeMessage nickmsg = new NickChangeMessage(msg);
+                var nickmsg = new NickChangeMessage(msg);
                                     
-                List<string> nickchannels = new List<string>();
+                var nickchannels = []; // string
 
-                foreach (var chn in this.Channels)
+                for (var chn in this.Channels)
                 {
-                    User usr = chn.Value.Users.Where(u => u.Nick == msg.From.Parts[0]).FirstOrDefault();
+                    User usr = chn.Value.Users.Where(function(u) { return u.Nick == msg.From.Parts[0]; }).FirstOrDefault();
                     int usridx = chn.Value.Users.IndexOf(usr);
 
-                    if (usr != null)
+                    if (usr)
                     {
                         this.Channels[chn.Value.Display].Users[usridx].Nick = nickmsg.To;
                         this.Channels[chn.Value.Display].Users.Sort(sortuser);
