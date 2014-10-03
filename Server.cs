@@ -1,23 +1,29 @@
-﻿var User = require('./User');
+﻿
+var System = require('all')('System');
+var Events = require('all')('dabbit/Base/Events');
+var ModeModificationType = Events.ModeModificationType;
+var NickChangeMessage = Events.NickChangeMessage;
+
+var User = require('./User');
 var Connection = require('./Connection');
 var Mode = require('./Mode');
+
+var ModeType = require('./ModeType');
 var Topic = require('./Topic');
 var ServerType = require('./ServerType');
-var NickChangeMessage = require('./NickChangeMessage');
+
 var ModeType = require('./ModeType');
 var RawReplies = require('./RawReplies');
 var SourceEntity = require('./SourceEntity');
 var SourceEntityType = require('./SourceEntityType');
-var System = require('all')('System');
-var Events = require('all')('dabbit/Base/Events');
 
 function Server(ctx, me, connection) {
 
-    this.tempWhois = {};
-    this.tempList = [];
+    var tempWhois = {};
+    var tempList = [];
 
-    private ServerType serverType = ServerType.Unknown; // ServerType
-    var connection = new System.Javascript.CheckedProperty(connection, Connection); // Connection
+    var serverType = ServerType.Unknown; // ServerType
+    connection = new System.Javascript.CheckedProperty(connection, Connection); // Connection
 
     ctx = new System.Javascript.CheckedProperty(ctx, boolean); // IContext type
     if (!ctx.Value) {
@@ -39,7 +45,7 @@ function Server(ctx, me, connection) {
         return connection.Value;
     });
     this.__defineSetter__("Connection", function(val) {
-        connection.Valuie = value;
+        connection.Value = value;
     });
     
     this.Password = String.Empty;
@@ -59,7 +65,7 @@ function Server(ctx, me, connection) {
     });
 
     this.__defineGetter__("Type", function() {
-        return this.serverType;
+        return serverType;
     });
 
     me = new System.Javascript.CheckedProperty(me, User);
@@ -71,7 +77,6 @@ function Server(ctx, me, connection) {
         return me.Value;
     });
 
-    this.ctx = ctx;
     this.Channels = {}; //new Dictionary<string, Channel>(StringComparer.CurrentCultureIgnoreCase);
     this.OnNumeric = {}; //new Dictionary<RawReplies, IrcEventHandler>();
 
@@ -270,7 +275,7 @@ function Server(ctx, me, connection) {
 
                     if (!value)
                     {
-                        value = ctx.CreateChannel(this);
+                        value = ctx.Value.CreateChannel(this);
                         value.Modes = [];
                         value.Users = []
                         value.Topic = new Topic();
@@ -288,7 +293,7 @@ function Server(ctx, me, connection) {
                 }
                 else
                 {
-                    var usr = ctx.CreateUser(); // User
+                    var usr = ctx.Value.CreateUser(); // User
                     usr.Nick = jm.From.Parts[0];
                     usr.Ident = jm.From.Parts[1];
                     usr.Host = jm.From.Parts[2];
@@ -394,7 +399,7 @@ function Server(ctx, me, connection) {
                     if (String.IsNullOrEmpty(msg.Parts[i]))
                         continue;
 
-                    User tempuser = ctx.CreateUser();
+                    User tempuser = ctx.Value.CreateUser();
                     tempuser.Modes = [];
 
                     if (this.HostInNames)
@@ -529,30 +534,31 @@ function Server(ctx, me, connection) {
                     
 
                 }
+
                 if (nickmsg.From.Parts[0] == me.Nick)
                 {
-                    me.Nick = nickmsg.To.Substring(1);
+                    me.Nick = nickmsg.To.substring(1);
                 }
 
-                nickmsg.Channels = nickchannels.ToArray();
-                
-                if (this.OnNickChange != null)
-                {
-                    this.OnNickChange(this, nickmsg);
-                }
-
+                nickmsg.Channels = nickchannels;
+                this.Events.emit('OnNickChange', this, nickmsg);
                 break;
-            #endregion
-            #region MODE
+            // ///
+            // END NICK
+            // ///
+
+            // ***
+            // BEGIN MODE
+            // ***
             case "MODE":
 
-                string modesstring = msg.Parts[3];
-                int paramsindex = 4;
-                bool adding = true;
+                var modesstring = msg.Parts[3];
+                var paramsindex = 4;
+                var adding = true;
 
-                string prefixz = this.Attributes["PREFIX_PREFIXES"];
+                var prefixz = this.Attributes["PREFIX_PREFIXES"];
                 int start = modesstring[0] == ':' ? 1 : 0;
-                for (int i = start; i < modesstring.Length; i++)
+                for (var i = start; i < modesstring.length; i++)
                 {
                     if (modesstring[i] == '+')
                     {
@@ -566,13 +572,13 @@ function Server(ctx, me, connection) {
                     }
 
 
-                    Mode mode = new Mode();
+                    var mode = new Mode();
                     mode.Display = mode.Character = modesstring[i];
                     mode.ModificationType = adding ? ModeModificationType.Adding : ModeModificationType.Removing;
 
-                    if (this.Attributes["CHANMODES_A"].Contains(modesstring[i].ToString()) ||
-                        this.Attributes["CHANMODES_B"].Contains(modesstring[i].ToString()) ||
-                        this.Attributes["CHANMODES_C"].Contains(modesstring[i].ToString()))
+                    if (this.Attributes["CHANMODES_A"].Contains(modesstring[i].toString()) ||
+                        this.Attributes["CHANMODES_B"].Contains(modesstring[i].toString()) ||
+                        this.Attributes["CHANMODES_C"].Contains(modesstring[i].toString()))
                     {
                         mode.Argument = msg.Parts[paramsindex++];
                     }
@@ -583,47 +589,43 @@ function Server(ctx, me, connection) {
 
                     mode.Character = modesstring[i];
 
-                    if (msg.Parts[2] != me.Nick && this.Attributes["PREFIX_MODES"].Contains(modesstring[i].ToString()))
+                    if (msg.Parts[2] != me.Nick && this.Attributes["PREFIX_MODES"].indexOf(modesstring[i].ToString()) != -1)
                     {
                         mode.Type = ModeType.User;
                         mode.Argument = msg.Parts[paramsindex++];
 
                         mode.Character = this.Attributes["PREFIX_PREFIXES"][this.Attributes["PREFIX_MODES"].IndexOf(mode.Character)];
 
-                        int userid = this.Channels[msg.Parts[2]].Users.
-                            Select((item, index) => new { Index = index, Item = item })
-                            .Where(u => u.Item.Nick == mode.Argument).First().Index;
+                        var userid = this.Channels[msg.Parts[2]].Users.WhereId(function(u) { return u.Item.Nick == mode.Argument; }).First();
 
                         if (mode.ModificationType == ModeModificationType.Removing)
                         {
                             this.Channels[msg.Parts[2]].Users[userid].Modes.
                                 Remove(this.Channels[msg.Parts[2]].Users[userid].Modes.
-                                Where(m => m == mode.Character.ToString()).First());
-
-
+                                Where(function(m) { return m == mode.Character.ToString(); }).First());
                         }
                         else
                         {
-                            this.Channels[msg.Parts[2]].Users[userid].Modes.Add(mode.Character.ToString());
+                            this.Channels[msg.Parts[2]].Users[userid].Modes.push(mode.Character.ToString());
 
-                            this.Channels[msg.Parts[2]].Users[userid].Modes.Sort(delegate(string s1, string s2)
+                            this.Channels[msg.Parts[2]].Users[userid].Modes.sort(function(s1, s2)
                             {
-                                return prefixz.IndexOf(s1[0]).CompareTo(prefixz.IndexOf(s2[0]));
+                                return prefixz.indexOf(s1[0]) - (prefixz.indexOf(s2[0]));
                             });
                         }
 
-                        this.Channels[msg.Parts[2]].Users.Sort(sortuser);
+                        this.Channels[msg.Parts[2]].Users.sort(sortuser);
                     }
                     else if (msg.Parts[2] == me.Nick)
                     {
                         mode.Type = ModeType.UMode;
                         if (mode.ModificationType == ModeModificationType.Adding)
                         {
-                            me.Modes.Add(mode.Character.ToString());
+                            me.Modes.push(mode.Character.ToString());
                         }
                         else
                         {
-                            me.Modes.Remove(me.Modes.Where(m => m[0] == mode.Character).First());
+                            me.Modes.Remove(me.Modes.Where(function(m) { return m[0] == mode.Character; }).First());
                         }
                     }
                     else
@@ -635,57 +637,59 @@ function Server(ctx, me, connection) {
 
                             if (mode.Character == 'b')
                             {
-                                if (this.OnBan != null)
-                                {
-                                    this.OnBan(this, msg);
-                                }
+                                this.Events.emit('OnBan', this, msg);
                             }
                         }
                         else
                         {
                             this.Channels[msg.Parts[2]].Modes.Remove
-                                (this.Channels[msg.Parts[2]].Modes.Where(m => m.Character == mode.Character &&
-                                    mode.Argument == m.Argument).First());
+                                (this.Channels[msg.Parts[2]].Modes.Where(function (m) { return m.Character == mode.Character &&
+                                    mode.Argument == m.Argument; }).First());
 
 
                             if (mode.Character == 'b')
                             {
-                                if (this.OnUnban != null)
-                                {
-                                    this.OnUnban(this, msg);
-                                }
+                                this.Events.emit('OnUnban', this, msg);
                             }
                         }
                     }
+                    var modeMessage = new ModeMessage(msg);
+                    modeMessage.Mode = mode;
 
-                    if (this.OnModeChange != null)
-                    {
-                        this.OnModeChange(this, new ModeMessage(msg) { Mode = mode });
-                    }
-
+                    this.Events.emit('OnModeChange', this, modeMessage);
                 }
 
                 break;
-            #endregion
-            #region 366 End of /Names List
+            // ///
+            // END MODE
+            // ///
+
+            // ***
+            // BEGIN 366 End of /Names List
+            // ***
             case "366": // End of /names list
 
-                JoinMessage jm_ = new JoinMessage(msg);
+                var jm_ = new JoinMessage(msg);
                 jm_.Channel = msg.Parts[3];
 
-                if (this.Channels[jm_.Channel].ChannelLoaded && this.OnNewChannelJoin != null)
+                if (this.Channels[jm_.Channel].ChannelLoaded)
                 {
-                    this.OnNewChannelJoin(this, jm_);
+                    this.Events.emit('OnNewChannelJoin', this, jm_);
                 }
                 break;
-            #endregion
-            #region 332 Channel Topic (On Join)
+            // ///
+            // END 366 End of /Names List
+            // ///
+
+            // ***
+            // BEGIN 332 Channel Topic (On Join)
+            // ***
             case "332":
-                Channel tmpchan;
+                var tmpchan;
 
-                this.Channels.TryGetValue(msg.Parts[3], out tmpchan);
+                tmpchan = this.Channels[sg.Parts[3]];
 
-                if (tmpchan == null)
+                if (!tmpchan)
                 {
                     // We don't want to execute in case the user called this command outside of a channel
                     return;
@@ -695,21 +699,19 @@ function Server(ctx, me, connection) {
                 tmpchan.Topic.Display = msg.MessageLine;
 
                 this.Channels[msg.Parts[3]] = tmpchan;
-
-                if (this.OnTopic != null)
-                {
-                    this.OnTopic(this, msg);
-                }
+                this.Events.emit('OnTopic', this, msg);
                 break;
-            #endregion
-            #region 333 Channel Topic set by and when (on join)
+            // ///
+            // END 322 Channel TOpic (OnJoin)
+            // ///
+
+            // ***
+            // BEGIN 333 Channel Topic set by and when (on join)
+            // ***
             case "333": // Who set the topic and when they set it
-                
-                Channel tmpchan2;
+                var tmpchan2 = this.Channels[msg.Parts[3]];
 
-                this.Channels.TryGetValue(msg.Parts[3], out tmpchan2);
-
-                if (tmpchan2 == null)
+                if (!tmpchan2)
                 {
                     // If a user calls topic by themselves we don't want to execute this
                     return;
@@ -717,40 +719,51 @@ function Server(ctx, me, connection) {
 
                 tmpchan2.Topic.SetBy = msg.Parts[4];
                 // Set a dateTime to the beginning of unix epoch
-                DateTime dateTime = new System.DateTime(1970, 1, 1, 0, 0, 0, 0);
+                //DateTime dateTime = new System.DateTime(1970, 1, 1, 0, 0, 0, 0);
                 // Add the # of seconds (the date of which we set the channel topic)
-                dateTime = dateTime.AddSeconds(Int32.Parse(msg.Parts[5]));
+                //dateTime = dateTime.AddSeconds(Int32.Parse(msg.Parts[5]));
 
-                tmpchan2.Topic.DateSet = dateTime;
+                tmpchan2.Topic.DateSet = new Date(msg.Parts[5] * 1000);
 
                 this.Channels[msg.Parts[3]] = tmpchan2;
                 break;
-            #endregion
-            #region 004
-            case "004": // Get Server Type
-                Array values = Enum.GetValues(typeof(ServerType));
-                this.me.Nick = msg.Parts[2];
+            // ///
+            // END 333 Channel Topic set by and when (on join)
+            // ///
 
-                for( int i = 0; i < ServerTypeSearch.MatchToServerType.Count(); i++ )
+            // ***
+            // BEGIN 004
+            // ***
+            case "004": // Get Server Type
+                var values = Enum.GetValues(typeof(ServerType));
+                this.me.Nick = msg.Parts[2];
+                serverType = ServerType.Unknown;
+
+                for( var serverType in ServerType)
                 {
-                    if (msg.Parts[4].StartsWith(ServerTypeSearch.MatchToServerType[i]))
+                    if (msg.Parts[4].startsWith(serverType))
                     {
-                        this.serverType = (ServerType)i;
+                        serverType = serverType;
                         break;
                     }
                 }
                 break;
-            #endregion
-            #region 005
+            // ///
+            // END 004
+            // ///
+
+            // ***
+            // BEGIN 005
+            // ***
             case "005":
-                for (int i = 3; i < msg.Parts.Count(); i++)
+                for (var i = 3; i < msg.Parts.length; i++)
                 {
-                    string key = String.Empty;
-                    string value = String.Empty;
+                    var key = String.Empty;
+                    var value = String.Empty;
 
                     if (msg.Parts[i].Contains("="))
                     {
-                        string[] sep = msg.Parts[i].Split('=');
+                        string[] sep = msg.Parts[i].split('=');
                         key = sep[0];
                         value = sep[1];
                     }
@@ -760,36 +773,36 @@ function Server(ctx, me, connection) {
                         value = "true";
                     }
 
-                    if (!this.attributes.ContainsKey(key))
+                    if (!this.Attributes.indexOf(key) != -1)
                     {
-                        this.attributes.Add(key, value);
+                        this.Attributes.Add(key, value);
                     }
                     else
                     {
-                        this.attributes[key] = value;
+                        this.Attributes[key] = value;
                     }
 
                     if (key == "NAMESX")
                     {
                         connection.Value.Write("PROTOCTL NAMESX");
-                        this.multiModes = true;
+                        multiModes = true;
                     }
                     else if (key == "UHNAMES")
                     {
                         connection.Value.Write("PROTOCTL UHNAMES");
-                        this.hostInNames = true;
+                        hostInNames = true;
                     } 
                     else if (key == "PREFIX")
                     {
-                        string tosplit = value.Substring(1);
-                        string[] split = tosplit.Split(')');
+                        var tosplit = value.substring(1);
+                        var split = tosplit.split(')');
                         this.Attributes.Add("PREFIX_MODES", split[0]);
                         this.Attributes.Add("PREFIX_PREFIXES", split[1]);
                         //
                     }
                     else if (key == "CHANMODES")
                     {
-                        string[] chanmodes = value.Split(',');
+                        var chanmodes = value.split(',');
 
                         // Mode that adds or removes nick or address to a list
                         this.Attributes.Add("CHANMODES_A", chanmodes[0]);
@@ -802,12 +815,16 @@ function Server(ctx, me, connection) {
                     }
                 }
                 break;
-            #endregion
-            #region CAP
+            // ///
+            // END 004
+            // ///
+            
+            // ***
+            // BEGIN CAP
+            // **
             case "CAP":
                 // :leguin.freenode.net CAP goooooodab LS :account-notify extended-join identify-msg multi-prefix sasl
-
-                if (msg.Parts.Count() < 5)
+                if (msg.Parts.length) < 5)
                     break;
 
                 if (msg.Parts[3] != "LS")
@@ -827,26 +844,37 @@ function Server(ctx, me, connection) {
 
                 connection.Value.Write("CAP END");
                 break;
-            #endregion
-            #region AWWAY/UNAWAY
+            // /// 
+            // END CAP
+            // ///
+
+            // ***
+            // BEGIN AWWAY/UNAWAY
+            // ***
             case "306": // :irc.foonet.com 306 dabb :You have been marked as being away
 
-                if (this.OnAway != null)
-                    this.OnAway(this, msg);
-                break;
+                this.Events.emit('OnAway', this, msg);
             case "305": // :irc.foonet.com 305 dabb :You are no longer marked as being away
-                if (this.OnUnAway != null)
-                    this.OnUnAway(this, msg);
+                this.Events.emit('OnUnAway', this, msg);
                 break;
-            #endregion
-            #region INVITE
+            // ///
+            // END AWAY/UNAWAY
+            // ///
+
+            // ***
+            // BEGIN INVITE
+            // ***
             case "INVITE": // :dab!dabitp@dab.biz INVITE dabb :#dab
 
-                this.OnInvite(this, msg);
-
+                this.Events.emit('OnInvite', this, msg);
                 break;
-            #endregion
-            #region WHOIS
+            // ///
+            // END INVITE
+            // ///
+
+            // ***
+            // BEGIN WHOIS
+            // ***
                 /*
                  * 
                  * 
@@ -864,65 +892,65 @@ function Server(ctx, me, connection) {
             case "311": // :hyperion.gamergalaxy.net 311 dabbb dab dabitp dab.biz * :David
 
                 // Either never done a whois before or recycle old whois result
-                // Meaning the whois is not thread safe.
-                if (this.tempWhois == null || tempWhois.Nick != msg.Parts[3])
+                // Meaning the whois is not thre`ad safe.
+                if (!tempWhois || tempWhois.Nick != msg.Parts[3])
                 {
-                    this.tempWhois = this.ctx.CreateUser();
-                    this.tempWhois.Nick = msg.Parts[3];
+                    tempWhois = ctx.Value.CreateUser();
+                    tempWhois.Nick = msg.Parts[3];
                 }
 
-                this.tempWhois.Ident = msg.Parts[4];
-                this.tempWhois.Host = msg.Parts[5];
-                this.tempWhois.Name = msg.MessageLine;
+                tempWhois.Ident = msg.Parts[4];
+                tempWhois.Host = msg.Parts[5];
+                tempWhois.Name = msg.MessageLine;
 
                 break;
             case "378": // (IRCOP Message) :simmons.freenode.net 378 ivazquez ivazquez :is connecting from *@host ip
                 // Either never done a whois before or recycle old whois result
                 // Meaning the whois is not thread safe.
-                if (this.tempWhois == null || tempWhois.Nick != msg.Parts[3])
+                if (!tempWhois || tempWhois.Nick != msg.Parts[3])
                 {
-                    this.tempWhois = this.ctx.CreateUser();
-                    this.tempWhois.Nick = msg.Parts[3];
+                    tempWhois = ctx.Value.CreateUser();
+                    tempWhois.Nick = msg.Parts[3];
                 }
 
-                this.tempWhois.Attributes.Add(msg.MessageLine);
+                tempWhois.Attributes.Add(msg.MessageLine);
 
                 break;
             case "379": // :irc.foonet.com 379 dab dab :is using modes +iowghaAsxN +kcfvGqso
                 // Either never done a whois before or recycle old whois result
                 // Meaning the whois is not thread safe.
-                if (this.tempWhois == null || tempWhois.Nick != msg.Parts[3])
+                if (!tempWhois || tempWhois.Nick != msg.Parts[3])
                 {
-                    this.tempWhois = this.ctx.CreateUser();
-                    this.tempWhois.Nick = msg.Parts[3];
+                    tempWhois = ctx.Value.CreateUser();
+                    tempWhois.Nick = msg.Parts[3];
                 }
 
-                this.tempWhois.Modes = new List<string>();
-                this.tempWhois.Modes.Add(msg.Parts[7] + " " + (msg.Parts.Count() > 8 ? msg.Parts[8] : ""));
+                tempWhois.Modes = new List<string>();
+                tempWhois.Modes.Add(msg.Parts[7] + " " + (msg.Parts.Count() > 8 ? msg.Parts[8] : ""));
 
                 break;
             case "307": // :registered nick?
                 // Either never done a whois before or recycle old whois result
                 // Meaning the whois is not thread safe.
-                if (this.tempWhois == null || tempWhois.Nick != msg.Parts[3])
+                if (!tempWhois || tempWhois.Nick != msg.Parts[3])
                 {
-                    this.tempWhois = this.ctx.CreateUser();
-                    this.tempWhois.Nick = msg.Parts[3];
+                    tempWhois = ctx.Value.CreateUser();
+                    tempWhois.Nick = msg.Parts[3];
                 }
 
-                this.tempWhois.Identified = true;
+                tempWhois.Identified = true;
 
                 break;
             case "319": // Channels :hyperion.gamergalaxy.net 319 dabbb dab :~#dab &#gamergalaxy ~#dab.beta &#office
                 // Either never done a whois before or recycle old whois result
                 // Meaning the whois is not thread safe.
-                if (this.tempWhois == null || tempWhois.Nick != msg.Parts[3])
+                if (!tempWhois || tempWhois.Nick != msg.Parts[3])
                 {
-                    this.tempWhois = this.ctx.CreateUser();
-                    this.tempWhois.Nick = msg.Parts[3];
+                    tempWhois = ctx.Value.CreateUser();
+                    tempWhois.Nick = msg.Parts[3];
                 }
 
-                this.tempWhois.Channels = new List<Channel>();
+                tempWhois.Channels = new List<Channel>();
 
                 msg.Parts[4] = msg.Parts[4].Substring(1);
 
@@ -932,82 +960,81 @@ function Server(ctx, me, connection) {
                     chan319.Name = msg.Parts[i];
                     chan319.Display = msg.Parts[i];
 
-                    this.tempWhois.Channels.Add(chan319);
+                    tempWhois.Channels.Add(chan319);
                 }
 
                 break;
             case "312": // Server :hyperion.gamergalaxy.net 312 dabbb dab hyperion.gamergalaxy.net :Gamer Galaxy IRC
                 // Either never done a whois before or recycle old whois result
                 // Meaning the whois is not thread safe.
-                if (this.tempWhois == null || tempWhois.Nick != msg.Parts[3])
+                if (!tempWhois || tempWhois.Nick != msg.Parts[3])
                 {
-                    this.tempWhois = this.ctx.CreateUser();
-                    this.tempWhois.Nick = msg.Parts[3];
+                    tempWhois = ctx.Value.CreateUser();
+                    tempWhois.Nick = msg.Parts[3];
                 }
 
-                this.tempWhois.Server = msg.Parts[4] + " " + msg.MessageLine;
+                tempWhois.Server = msg.Parts[4] + " " + msg.MessageLine;
 
                 break;
             case "330": // :navi.gamergalaxy.net 330 bad dab` dab :is logged in as
 
-                if (this.tempWhois == null || tempWhois.Nick != msg.Parts[3])
+                if (!tempWhois || tempWhois.Nick != msg.Parts[3])
                 {
-                    this.tempWhois = this.ctx.CreateUser();
-                    this.tempWhois.Nick = msg.Parts[3];
+                    tempWhois = ctx.Value.CreateUser();
+                    tempWhois.Nick = msg.Parts[3];
                 }
 
-                this.tempWhois.IdentifiedAs = msg.Parts[4];
+                tempWhois.IdentifiedAs = msg.Parts[4];
 
                 break;
             case "313": // is a net admin
                 // Either never done a whois before or recycle old whois result
                 // Meaning the whois is not thread safe.
-                if (this.tempWhois == null || tempWhois.Nick != msg.Parts[3])
+                if (!tempWhois || tempWhois.Nick != msg.Parts[3])
                 {
-                    this.tempWhois = this.ctx.CreateUser();
-                    this.tempWhois.Nick = msg.Parts[3];
+                    tempWhois = ctx.Value.CreateUser();
+                    tempWhois.Nick = msg.Parts[3];
                 }
 
-                this.tempWhois.IrcOp = true;
-                this.tempWhois.Attributes.Add(msg.MessageLine);
+                tempWhois.IrcOp = true;
+                tempWhois.Attributes.Add(msg.MessageLine);
 
                 break;
             case "310": // available for help
                 // Either never done a whois before or recycle old whois result
                 // Meaning the whois is not thread safe.
-                if (this.tempWhois == null || tempWhois.Nick != msg.Parts[3])
+                if (!tempWhois || tempWhois.Nick != msg.Parts[3])
                 {
-                    this.tempWhois = this.ctx.CreateUser();
-                    this.tempWhois.Nick = msg.Parts[3];
+                    tempWhois = ctx.Value.CreateUser();
+                    tempWhois.Nick = msg.Parts[3];
                 }
-
-                this.tempWhois.Attributes.Add(msg.MessageLine);
+                tempWhois.Attributes.Add(msg.MessageLine);
 
                 break;
             case "671": // secure connection
                 // Either never done a whois before or recycle old whois result
                 // Meaning the whois is not thread safe.
-                if (this.tempWhois == null || tempWhois.Nick != msg.Parts[3])
+                if (!tempWhois || tempWhois.Nick != msg.Parts[3])
                 {
-                    this.tempWhois = this.ctx.CreateUser();
-                    this.tempWhois.Nick = msg.Parts[3];
+                    tempWhois = ctx.Value.CreateUser();
+                    tempWhois.Nick = msg.Parts[3];
                 }
 
-                this.tempWhois.Attributes.Add(msg.MessageLine);
+                tempWhois.Attributes.Add(msg.MessageLine);
 
                 break;
             case "317": // idle time
                 // Either never done a whois before or recycle old whois result
                 // Meaning the whois is not thread safe.
-                if (this.tempWhois == null || tempWhois.Nick != msg.Parts[3])
+                if (!tempWhois || tempWhois.Nick != msg.Parts[3])
                 {
-                    this.tempWhois = this.ctx.CreateUser();
-                    this.tempWhois.Nick = msg.Parts[3];
+                    tempWhois = ctx.Value.CreateUser();
+                    tempWhois.Nick = msg.Parts[3];
                 }
 
                 // :hyperion.gamergalaxy.net 317 dabbb dab 4405 1383796581 :seconds idle, signon time
-                this.tempWhois.IdleTime = Int32.Parse(msg.Parts[4]);
-                this.tempWhois.SignedOn = Utility.FromUnixTime(long.Parse(msg.Parts[5]));
+                tempWhois.IdleTime = parseInt(msg.Parts[4]);
+                tempWhois.SignedOn = new Date(msg.Parts[5] * 1000);
 
                 break;
             case "401": // No such nick
@@ -1017,79 +1044,82 @@ function Server(ctx, me, connection) {
                             <- :irc.botsites.net 318 dab sdfasdfasdf :End of /WHOIS list.
                             */
 
-                if (this.tempWhois != null && tempWhois.Nick != msg.Parts[3])
+                if (tempWhois && tempWhois.Nick != msg.Parts[3])
                 {
-                    this.tempWhois = null;
+                    tempWhois = null;
                 }
 
                 WhoisMessage whomsg = new WhoisMessage(msg);
-                whomsg.Who = this.tempWhois;
+                whomsg.Who = tempWhois;
 
-                if (this.OnWhoIs != null)
-                {
-                    this.OnWhoIs(this, whomsg);
-                }
+                this.Events.emit('OnWhoIs', this, msg);
                 break;
 
-            #endregion
-            #region Connection Established (End of MOTD or No MOTD)
+            // ///
+            // END 
+            // ///
+
+            // ***
+            // BEGIN Connection Established (End of MOTD or No MOTD)
+            // ***
             case "376":// End of MOTD. Meaning most spam is done. We can begin our adventure
             case "422": // No MOTD, but still, no more spam.
-                if (this.OnConnectionEstablished != null)
-                {
-                    this.OnConnectionEstablished(this, msg);
-                }
+                this.Events.emit('OnConnectionEstablished', this, msg);
                 break;
-            #endregion
-            #region MOTD
+            // ///
+            // END Connection Established (End of MOTD or No MOTD)
+            // ///
+            
+            // ***
+            // BEGIN MOTD
+            // ***
             case "372":
             case "375":
-                if (this.OnMotd != null)
-                    this.OnMotd(this, msg);
-
+                this.Events.emit('OnMotd', this, msg);
                 break;
-            #endregion
-            #region LIST
+            // ///
+            // END MOTD
+            // ///
+
+            // ***
+            // BEGIN LIST
+            // ***
             case "321":
-                this.tempList = new List<ListEntry>();
+                tempList = [];
                 break;
             case "322":
-                ListEntry le = new ListEntry();
+                var le = new Events.ListEntry();
+
                 le.Channel = msg.Parts[3];
-                le.Users = Int32.Parse(msg.Parts[4]);
+                le.Users = parseInt(msg.Parts[4]);
                 le.Topic = msg.MessageLine;
-                this.tempList.Add(le);
+                tempList.Add(le);
                 break;
             case "323":
-                ListMessage lm = new ListMessage(msg);
+                var lm = new EventListMessage(msg);
 
-                lm.Entries = this.tempList.ToArray();
-
-                if (this.OnList != null)
-                {
-                    this.OnList(this, lm);
-                }
+                lm.Entries = tempList.ToArray();
+                this.Events.emit('OnList', this, lm);
                 break;
-            #endregion
+            // ///
+            // END LIST
+            // ///
             default:
-                if (this.OnUnhandledEvent != null)
-                {
-                    this.OnUnhandledEvent(this, msg);
-                }
+                this.Events.emit('OnUnhandledEvent', this, lm);
                 break;
 
         }
     }
 
-    private int sortuser(User u1, User u2)
+    var sortuser = function(u1, u2)
     {
-        string prefixes = this.Attributes["PREFIX_PREFIXES"];
+        var prefixes = this.Attributes["PREFIX_PREFIXES"];
 
         if (u1.Modes.Count() == 0)
         {
             if (u2.Modes.Count() == 0)
             {
-                return u1.Nick.CompareTo(u2.Nick);
+                return u1.Nick.localeCompare(u2.Nick);
             }
             return 1;
         }
@@ -1099,11 +1129,11 @@ function Server(ctx, me, connection) {
             return -1;
         }
 
-        int res = prefixes.IndexOf(u1.Modes[0][0]).CompareTo(prefixes.IndexOf(u2.Modes[0][0]));
+        int res = prefixes.indexOf(u1.Modes[0][0]) - prefixes.indexOf(u2.Modes[0][0]);
 
         if (res == 0)
         {
-            res = u1.Nick.CompareTo(u2.Nick);
+            res = u1.Nick.localeCompare(u2.Nick);
         }
 
         return res;
