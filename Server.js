@@ -70,7 +70,7 @@ function Server(ctx, me, connection) {
 
     me = new System.Javascript.CheckedProperty(me, User);
     if (me.Modes == null) {
-        me.Modes = new List<string>();
+        me.Modes = [];
     }
 
     this.__defineGetter__("Me", function() {
@@ -80,14 +80,12 @@ function Server(ctx, me, connection) {
     this.Channels = {}; //new Dictionary<string, Channel>(StringComparer.CurrentCultureIgnoreCase);
     this.OnNumeric = {}; //new Dictionary<RawReplies, IrcEventHandler>();
 
-    connection.Value.RawMessageReceived = this.rawMessageReceived;
-
     // Add prefined and used attributes
     this.Attributes["NETWORK"] = connection.Value.Host;
-    this.Attributes["STATUSMSG"] = "";
-    this.Attributes["CHANTYPES"] = "";
+    this.Attributes["STATUSMSG"] = String.Empty;
+    this.Attributes["CHANTYPES"] = String.Empty;
 
-    connection.Value.Connect();
+    connection.Value.Connect(rawMessageReceived);
 
     connection.Value.Write("CAP LS"); // Get list of extras (For multi prefix)
     
@@ -109,7 +107,7 @@ function Server(ctx, me, connection) {
     */
     this.Events = new require('events').EventEmitter;
 
-    var rawMessageReceived(msg)
+    var rawMessageReceived = function(msg)
     {
         if (!msg)
         {
@@ -399,7 +397,7 @@ function Server(ctx, me, connection) {
                     if (String.IsNullOrEmpty(msg.Parts[i]))
                         continue;
 
-                    User tempuser = ctx.Value.CreateUser();
+                    var tempuser = ctx.Value.CreateUser();
                     tempuser.Modes = [];
 
                     if (this.HostInNames)
@@ -407,7 +405,7 @@ function Server(ctx, me, connection) {
                         var nick = msg.Parts[i].split('!');
                         if (nick.Count() > 1)
                         {
-                            string[] identhost = nick[1].split('@');
+                            var identhost = nick[1].split('@');
                             tempuser.Nick = nick[0];
                             tempuser.Ident = identhost[0];
                             tempuser.Host = identhost[1];
@@ -427,7 +425,7 @@ function Server(ctx, me, connection) {
                         tempuser.Modes.push(tempuser.Nick[0].toString());
                         tempuser.Nick = tempuser.Nick.substring(1);
 
-                        tempuser.Modes.sort(delegate(string s1, string s2)
+                        tempuser.Modes.sort(function(s1, s2)
                         {
                             return prefixes.indexOf(s1[0]) - prefixes.indexOf(s2[0]);
                         });
@@ -521,8 +519,8 @@ function Server(ctx, me, connection) {
 
                 for (var chn in this.Channels)
                 {
-                    User usr = chn.Value.Users.Where(function(u) { return u.Nick == msg.From.Parts[0]; }).FirstOrDefault();
-                    int usridx = chn.Value.Users.IndexOf(usr);
+                    var usr = chn.Value.Users.Where(function(u) { return u.Nick == msg.From.Parts[0]; }).FirstOrDefault();
+                    var usridx = chn.Value.Users.IndexOf(usr);
 
                     if (usr)
                     {
@@ -557,7 +555,7 @@ function Server(ctx, me, connection) {
                 var adding = true;
 
                 var prefixz = this.Attributes["PREFIX_PREFIXES"];
-                int start = modesstring[0] == ':' ? 1 : 0;
+                var start = modesstring[0] == ':' ? 1 : 0;
                 for (var i = start; i < modesstring.length; i++)
                 {
                     if (modesstring[i] == '+')
@@ -763,7 +761,7 @@ function Server(ctx, me, connection) {
 
                     if (msg.Parts[i].Contains("="))
                     {
-                        string[] sep = msg.Parts[i].split('=');
+                        var sep = msg.Parts[i].split('=');
                         key = sep[0];
                         value = sep[1];
                     }
@@ -824,7 +822,7 @@ function Server(ctx, me, connection) {
             // **
             case "CAP":
                 // :leguin.freenode.net CAP goooooodab LS :account-notify extended-join identify-msg multi-prefix sasl
-                if (msg.Parts.length) < 5)
+                if (msg.Parts.length < 5)
                     break;
 
                 if (msg.Parts[3] != "LS")
@@ -833,7 +831,7 @@ function Server(ctx, me, connection) {
                 // remove leading : so we can do a direct check
                 msg.Parts[4] = msg.Parts[4].Substring(1);
 
-                for (int i = 4; i < msg.Parts.Count(); i++)
+                for (var i = 4; i < msg.Parts.Count(); i++)
                 {
                     if (msg.Parts[i] == "multi-prefix")
                     {
@@ -925,7 +923,7 @@ function Server(ctx, me, connection) {
                     tempWhois.Nick = msg.Parts[3];
                 }
 
-                tempWhois.Modes = new List<string>();
+                tempWhois.Modes = [];
                 tempWhois.Modes.Add(msg.Parts[7] + " " + (msg.Parts.Count() > 8 ? msg.Parts[8] : ""));
 
                 break;
@@ -950,13 +948,13 @@ function Server(ctx, me, connection) {
                     tempWhois.Nick = msg.Parts[3];
                 }
 
-                tempWhois.Channels = new List<Channel>();
+                tempWhois.Channels = [];
 
                 msg.Parts[4] = msg.Parts[4].Substring(1);
 
-                for (int i = 4; i < msg.Parts.Count(); i++)
+                for (var i = 4; i < msg.Parts.Count(); i++)
                 {
-                    Channel chan319 = new Channel(this);
+                    var chan319 = new Channel(this);
                     chan319.Name = msg.Parts[i];
                     chan319.Display = msg.Parts[i];
 
@@ -1049,7 +1047,7 @@ function Server(ctx, me, connection) {
                     tempWhois = null;
                 }
 
-                WhoisMessage whomsg = new WhoisMessage(msg);
+                var whomsg = new WhoisMessage(msg);
                 whomsg.Who = tempWhois;
 
                 this.Events.emit('OnWhoIs', this, msg);
@@ -1129,7 +1127,7 @@ function Server(ctx, me, connection) {
             return -1;
         }
 
-        int res = prefixes.indexOf(u1.Modes[0][0]) - prefixes.indexOf(u2.Modes[0][0]);
+        var res = prefixes.indexOf(u1.Modes[0][0]) - prefixes.indexOf(u2.Modes[0][0]);
 
         if (res == 0)
         {

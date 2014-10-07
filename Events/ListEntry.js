@@ -9,4 +9,4 @@ function ListEntry()
     this.Topic = String.Empty;
 }
 System.Javascript.Inherit(System.Object, ListEntry);
-modules.export = ListEntry;
+module.export = ListEntry;

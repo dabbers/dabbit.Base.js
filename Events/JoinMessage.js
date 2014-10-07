@@ -26,4 +26,4 @@ function JoinMessage(old) // Message param
 }
 System.Javascript.Inherit(Message, JoinMessage);
 
-module.exports = JoineMessage;
+module.exports = JoinMessage;
