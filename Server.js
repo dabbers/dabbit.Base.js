@@ -85,7 +85,7 @@ function Server(ctx, me, connection) {
     this.Attributes["STATUSMSG"] = String.Empty;
     this.Attributes["CHANTYPES"] = String.Empty;
 
-    connection.Value.Connect(rawMessageReceived);
+    connection.Value.ConnectAsync(rawMessageReceived);
 
     connection.Value.Write("CAP LS"); // Get list of extras (For multi prefix)
     
