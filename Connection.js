@@ -3,19 +3,20 @@ var AlreadyConnectedException = require('./AlreadyConnectedException');
 var Message = require('./Message');
 var SourceEntity = require('./SourceEntity');
 var SourceEntityType = require('./SourceEntityType');
+var Context = require('IContext');
 
 function Connection(inCtx, socket) {
     System.Object.call(this);
 
     var messages = []; // new Stack<Message>();
-    var ctx = new CheckedProperty(undefined, System.Typeof(Context));
+    var ctx = new CheckedProperty(undefined, Context);
     
     if (!inCtx) {
         throw new System.ArgumentException("Context cannot be null");
     }
     ctx.Value = inCtx;
 
-    var socketWrapper = new CheckedProperty(undefined, System.Typeof(SocketWrapper)); // ISocketWrapper
+    var socketWrapper = new CheckedProperty(undefined, (SocketWrapper)); // ISocketWrapper
     if (!socket) {
         throw new System.ArgumentException("Socket cannot be null");
     }

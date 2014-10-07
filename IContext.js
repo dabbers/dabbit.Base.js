@@ -25,6 +25,11 @@ function IContext() {
         throw new System.MustImplementException("CreateSocket");
     }
 
+    this.AddServer = function(me, conn) {
+
+        this.Servers.Add(new Base.Server(this, me, conn));
+    }
+
     /// <summary>
     /// Create a channel object
     /// <param name="svr">The Server object for applying this to. Used for passing into the Channel base class</param>

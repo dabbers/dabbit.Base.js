@@ -23,7 +23,7 @@ function Channel(svr) {
     this.__defineGetter__("Created", function() {
         return created.Value;
     });
-    var created = new System.Javascript.CheckedProperty(new Date(), System.Typeof(Date));
+    var created = new System.Javascript.CheckedProperty(new Date(), Date);
 
     this.__defineGetter__("ServerOf", function() {
         return server.Value;
@@ -39,14 +39,14 @@ function Channel(svr) {
     this.__defineSetter__("Topic", function(val) {
         topic.Value = val;
     });
-    var topic = new System.Javascript.CheckedProperty(new Topic(), System.Typeof(Topic));
+    var topic = new System.Javascript.CheckedProperty(new Topic(), Topic);
 
 
     this.toString = function() {
         return this.Name;
     }
 
-    var server = new System.Javascript.CheckedProperty(svr, System.Typeof(Server));
+    var server = new System.Javascript.CheckedProperty(svr, Server);
 
 }
 System.Javascript.Inherit(System.Object, Channel);
