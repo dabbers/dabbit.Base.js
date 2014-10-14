@@ -44,3 +44,6 @@ function User(se) {
         }
     }
 }
+System.Javascript.Inherit(System.Object, User);
+
+module.exports = User;

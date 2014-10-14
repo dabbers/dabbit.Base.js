@@ -1,8 +1,9 @@
 ﻿
 var System = require('all')('System');
-var Events = require('all')('dabbit/Base/Events');
-var ModeModificationType = Events.ModeModificationType;
-var NickChangeMessage = Events.NickChangeMessage;
+var Evnts = require('all')('dabbit/Base/Events');
+var events = require('events');
+var ModeModificationType = require('./ModeModificationType');
+var NickChangeMessage = Evnts.NickChangeMessage;
 
 var User = require('./User');
 var Connection = require('./Connection');
@@ -16,8 +17,10 @@ var ModeType = require('./ModeType');
 var RawReplies = require('./RawReplies');
 var SourceEntity = require('./SourceEntity');
 var SourceEntityType = require('./SourceEntityType');
+var IContext = require('./IContext');
 
 function Server(ctx, me, connection) {
+    Object.call(this);
 
     var tempWhois = {};
     var tempList = [];
@@ -25,13 +28,13 @@ function Server(ctx, me, connection) {
     var serverType = ServerType.Unknown; // ServerType
     connection = new System.Javascript.CheckedProperty(connection, Connection); // Connection
 
-    ctx = new System.Javascript.CheckedProperty(ctx, boolean); // IContext type
+    ctx = new System.Javascript.CheckedProperty(ctx, IContext); // IContext type
     if (!ctx.Value) {
         throw new System.ArgumentException("ctx cannot be null");
     }
 
-    var multiModes = new System.Javascript.CheckedProperty(false, boolean); // bool
-    var hostInNames = new System.Javascript.CheckedProperty(false, boolean); // bool
+    var multiModes = false; // bool
+    var hostInNames = false; // bool
 
     this.Attributes = {};
 
@@ -48,7 +51,7 @@ function Server(ctx, me, connection) {
         connection.Value = value;
     });
     
-    this.Password = String.Empty;
+    this.Password = "";
 
     this.__defineGetter__("MultiModes", function() {
         return multiModes;
@@ -82,20 +85,25 @@ function Server(ctx, me, connection) {
 
     // Add prefined and used attributes
     this.Attributes["NETWORK"] = connection.Value.Host;
-    this.Attributes["STATUSMSG"] = String.Empty;
-    this.Attributes["CHANTYPES"] = String.Empty;
 
-    connection.Value.ConnectAsync(rawMessageReceived);
-
-    connection.Value.Write("CAP LS"); // Get list of extras (For multi prefix)
+    this.Attributes["STATUSMSG"] = "";
+    this.Attributes["CHANTYPES"] = "";
     
-    if (!String.IsNullOrEmpty(this.Password))
-    {
-        connection.Value.Write("PASS " + this.Password);
-    }
+    var self = this;
 
-    connection.Value.Write("NICK " + this.Me.Nick);
-    connection.Value.Write("USER " + this.Me.Ident + " * * :" + this.Me.Name);
+    this.PerformConnect = function() {
+        connection.Value.ConnectAsync(rawMessageReceived);
+
+        connection.Value.Write("CAP LS"); // Get list of extras (For multi prefix)
+        
+        if (!String.IsNullOrEmpty(self.Password))
+        {
+            connection.Value.Write("PASS " + self.Password);
+        }
+
+        connection.Value.Write("NICK " + self.Me.Nick);
+        connection.Value.Write("USER " + self.Me.Ident + " * * :" + self.Me.Name);
+    }
 
     /*
     OnConnectionEstablished; OnRawMessage; OnError; OnNewChannelJoin; OnCloseChannelPart; 
@@ -105,21 +113,22 @@ function Server(ctx, me, connection) {
     OnChannelActionNotice; OnQueryMessage; OnQueryMessageNotice; OnQueryAction;  
     OnQueryActionNotice; OnCtcpRequest; OnCtcpReply; OnUnhandledEvent; OnNumeric;
     */
-    this.Events = new require('events').EventEmitter;
+    this.Events = new events.EventEmitter();
 
     var rawMessageReceived = function(msg)
     {
+        
         if (!msg)
         {
             return;
         }
 
-        this.Events.emit('OnRawMessage', this, msg);
+        self.Events.emit('OnRawMessage', this, msg);
         var temp = NaN;
 
         if (!isNaN(temp = msg.Command))
         {
-            this.Events.emit(temp, this, msg);
+            self.Events.emit(temp, this, msg);
         }
 
 
@@ -129,12 +138,12 @@ function Server(ctx, me, connection) {
             // START PRIVMSG
             // ***
             case "PRIVMSG":
-                var pvm = new Events.PrivmsgMessage(msg);
+                var pvm = new Evnts.PrivmsgMessage(msg);
 
                 // We are parsing a message to a channel
                 pvm.To = new SourceEntity([msg.Parts[2] ], SourceEntityType.Channel);
 
-                if (this.Attributes["STATUSMSG"].indexOf(msg.Parts[2][0].toString()) != -1)
+                if (self.Attributes["STATUSMSG"].indexOf(msg.Parts[2][0].toString()) != -1)
                 {
                     // Check for a wallops message (+#channel)
                     pvm.Wall = msg.Parts[2][0].toString();
@@ -143,20 +152,16 @@ function Server(ctx, me, connection) {
                     pvm.To = new SourceEntity([msg.Parts[2]], SourceEntityType.Channel);
                 }
 
-                if (this.Attributes["CHANTYPES"].indexOf(pvm.Parts[2][0].toString()) != -1)
+                if (self.Attributes["CHANTYPES"].indexOf(pvm.Parts[2][0].toString()) != -1)
                 {
                     if (msg.Parts[3] == ":\001ACTION")
                     {
                         msg.MessageLine = msg.MessageLine.substring(8, msg.MessageLine.length - 10);
-                        // CTCP Action
-                        if (this.OnChannelAction != null)
-                        {
-                            this.OnChannelAction(this, pvm);
-                        }
+                        self.Events.emit('OnChannelAction', this, pvm);
                     }
                     else
                     {
-                        this.Events.emit('OnChannelMessage', this, pvm);
+                        self.Events.emit('OnChannelMessage', this, pvm);
                     }
 
                     break;
@@ -172,14 +177,14 @@ function Server(ctx, me, connection) {
                     {
                         msg.MessageLine = msg.MessageLine.substring(9, msg.MessageLine.length - 1);
                         var lastpart = msg.Parts[msg.Parts.Count() - 1];
-                        msg.Parts[msg.Parts.Count() - 1] = lastpart.Substring(0, lastpart.length - 1);
+                        msg.Parts[msg.Parts.Count() - 1] = lastpart.substring(0, lastpart.length - 1);
                     }
 
-                    this.Events.emit('OnQueryAction', this, pvm);
+                    self.Events.emit('OnQueryAction', this, pvm);
                 }
                 else
                 {
-                    this.Events.emit('OnQueryMessage', this, pvm);
+                    self.Events.emit('OnQueryMessage', this, pvm);
                 }
 
                 break;
@@ -192,12 +197,12 @@ function Server(ctx, me, connection) {
             // BEGIN NOTICE
             // ***
             case "NOTICE":
-                pvm = new Events.PrivmsgMessage(msg);
+                pvm = new Evnts.PrivmsgMessage(msg);
 
                 // We are parsing a message to a channel
                 pvm.To = new SourceEntity([msg.Parts[2]], SourceEntityType.Channel);
 
-                if (this.Attributes["STATUSMSG"].indexOf(msg.Parts[2][0].toString()) != -1)
+                if (self.Attributes["STATUSMSG"].indexOf(msg.Parts[2][0].toString()) != -1)
                 {
                     // Check for a wallops message (+#channel)
                     pvm.Wall = msg.Parts[2][0].toString();
@@ -206,17 +211,17 @@ function Server(ctx, me, connection) {
                     pvm.To = new SourceEntity([msg.Parts[2]], SourceEntityType.Channel);
                 }
 
-                if (this.Attributes["CHANTYPES"].indexOf(pvm.Parts[2][0].toString()) != -1)
+                if (self.Attributes["CHANTYPES"].indexOf(pvm.Parts[2][0].toString()) != -1)
                 {
                     if (msg.Parts[3] == ":\001ACTION")
                     {
                         msg.MessageLine = msg.MessageLine.substring(9, msg.MessageLine.length - 10);
                         // CTCP Action
-                        this.Events.emit('OnChannelActionNotice', this, pvm);   
+                        self.Events.emit('OnChannelActionNotice', this, pvm);   
                     }
                     else
                     {
-                        this.Events.emit('OnChannelMessageNotice', this, pvm);
+                        self.Events.emit('OnChannelMessageNotice', this, pvm);
                     }
 
                     break;
@@ -236,11 +241,11 @@ function Server(ctx, me, connection) {
                     }
 
                     // CTCP Action
-                    this.Events.emit('OnQueryActionNotice', this, pvm);
+                    self.Events.emit('OnQueryActionNotice', this, pvm);
                 }
                 else
                 {
-                    this.Events.emit('OnQueryMessageNotice', this, pvm);
+                    self.Events.emit('OnQueryMessageNotice', this, pvm);
                 }
 
                 break;
@@ -255,7 +260,7 @@ function Server(ctx, me, connection) {
                 connection.Value.Write("PONG " + msg.Parts[1]);
                 break;
             case "ERROR":
-                this.Events.emit('OnError', this, msg);
+                self.Events.emit('OnError', this, msg);
                 break;
             // ///
             // END PING/ERROR
@@ -265,11 +270,11 @@ function Server(ctx, me, connection) {
             // BEGIN JOIN
             // ***
             case "JOIN":
-                var jm = new Events.JoinMessage(msg);
-                if (msg.From.Parts[0] == this.Me.Nick)
+                var jm = new Evnts.JoinMessage(msg);
+                if (msg.From.Parts[0] == self.Me.Nick)
                 {
                     //this.Channels.TryGetValue(msg.Parts[2], out value);
-                    var value = this.Channels[msg.Parts[2].toLowerCase()];
+                    var value = self.Channels[msg.Parts[2].toLowerCase()];
 
                     if (!value)
                     {
@@ -278,7 +283,7 @@ function Server(ctx, me, connection) {
                         value.Users = []
                         value.Topic = new Topic();
 
-                        value = this.Channels[msg.Parts[2].toLowerCase()];
+                        value = self.Channels[msg.Parts[2].toLowerCase()];
                     }
 
                     value.Name = msg.Parts[2];
@@ -286,8 +291,8 @@ function Server(ctx, me, connection) {
 
                     connection.Value.Write("MODE " + jm.Channel);
 
-                    this.Channels[msg.Parts[2]] = value;
-                    this.Events.emit('OnNewChannelJoin', this, jm);
+                    self.Channels[msg.Parts[2]] = value;
+                    self.Events.emit('OnNewChannelJoin', this, jm);
                 }
                 else
                 {
@@ -297,11 +302,11 @@ function Server(ctx, me, connection) {
                     usr.Host = jm.From.Parts[2];
                     usr.Modes = [];
 
-                    this.Channels[jm.Channel].Users.push(usr);
+                    self.Channels[jm.Channel].Users.push(usr);
 
 
-                    this.Channels[jm.Channel].Users.sort(sortuser);
-                    this.Events.emit('OnJoin', this, jm);
+                    self.Channels[jm.Channel].Users.sort(sortuser);
+                    self.Events.emit('OnJoin', this, jm);
                     
                 }
                 break;
@@ -314,7 +319,7 @@ function Server(ctx, me, connection) {
             // ***
             case "324": // :hyperion.gamergalaxy.net 324 dabbbb #dab +r
                 var chnl;
-                chnl = this.Channels[msg.Parts[3]];
+                chnl = self.Channels[msg.Parts[3]];
 
                 if (!chnl)
                 {
@@ -333,7 +338,7 @@ function Server(ctx, me, connection) {
                     var mode = new Mode();
 
                     // Is this a mode with a parameter?
-                    if (this.Attributes["CHANMODES_B"].indexOf(modes[i].toString()) != -1)
+                    if (self.Attributes["CHANMODES_B"].indexOf(modes[i].toString()) != -1)
                     {
                         mode.Argument = msg.Parts[paramidx++];
                     }
@@ -347,8 +352,8 @@ function Server(ctx, me, connection) {
                     chnl.Modes.push(mode);
                 }
 
-                this.Channels[msg.Parts[3]] = chnl;
-                this.Events.emit('324', this, msg);
+                self.Channels[msg.Parts[3]] = chnl;
+                self.Events.emit('324', this, msg);
 
                 break;
             // ///
@@ -361,21 +366,21 @@ function Server(ctx, me, connection) {
             case "329": // navi.gamergalaxy.net 329 dab #TBN 1403649503
                 var chan329Val;
 
-                chan329Val = this.Channels[msg.Parts[3]];
+                chan329Val = self.Channels[msg.Parts[3]];
 
                 if (!chan329Val) {
                     return;
                 }
 
                 chan329Val.Created = new Date(msg.Parts[4] * 1000);
-                this.Events.emit('329', this, msg);
+                self.Events.emit('329', this, msg);
 
                 break;
             case "353": // /Names list item :hyperion.gamergalaxy.net 353 badddd = #dab :badddd BB-Aso
                 //msg.Parts[4] = msg.Parts[4].Substring(1);
                 
                 var vall;
-                vall = this.Channels[msg.Parts[4]];
+                vall = self.Channels[msg.Parts[4]];
 
                 // Should NEVER HAPPEN
                 if (!vall)
@@ -390,7 +395,7 @@ function Server(ctx, me, connection) {
                 }
 
                 msg.Parts[5] = msg.Parts[5].substring(1);
-                var prefixes = this.Attributes["PREFIX_PREFIXES"];
+                var prefixes = self.Attributes["PREFIX_PREFIXES"];
 
                 for (var i = 5; i < msg.Parts.length; i++)
                 {
@@ -400,7 +405,7 @@ function Server(ctx, me, connection) {
                     var tempuser = ctx.Value.CreateUser();
                     tempuser.Modes = [];
 
-                    if (this.HostInNames)
+                    if (self.HostInNames)
                     {
                         var nick = msg.Parts[i].split('!');
                         if (nick.Count() > 1)
@@ -442,8 +447,8 @@ function Server(ctx, me, connection) {
                 }
 
 
-                this.Channels[msg.Parts[5]] = vall;
-                this.Events.emit('353', this, msg);
+                self.Channels[msg.Parts[5]] = vall;
+                self.Events.emit('353', this, msg);
 
                 break;
             // ///
@@ -454,15 +459,15 @@ function Server(ctx, me, connection) {
             // BEGIN PART
             // ***
             case "PART":
-                this.Channels[msg.Parts[2]].Users.Remove
-                    (this.Channels[msg.Parts[2]].Users.Where(function(u) { return u.Nick == msg.Parts[0] }).First());
+                self.Channels[msg.Parts[2]].Users.Remove
+                    (self.Channels[msg.Parts[2]].Users.Where(function(u) { return u.Nick == msg.Parts[0] }).First());
 
-                this.Events.emit('OnPart', this, msg);
+                self.Events.emit('OnPart', this, msg);
 
                 if (msg.From.Parts[0] == me.Nick)
                 {
-                    this.Channels.Remove(this.Channels.Where(function(u) { return u.Name == msg.Parts[2]; }).First());
-                    this.Events.emit('OnCloseChannelPart', this, msg);
+                    self.Channels.Remove(this.Channels.Where(function(u) { return u.Name == msg.Parts[2]; }).First());
+                    self.Events.emit('OnCloseChannelPart', this, msg);
                 }
 
                 break;
@@ -476,13 +481,13 @@ function Server(ctx, me, connection) {
             case "QUIT":
                 var channels = [];
 
-                for (var chn in this.Channels)
+                for (var chn in self.Channels)
                 {
-                    var usr = this.Channels[chn].Users.Where(function(u) {return u.Nick == msg.From.Parts[0]; }).FirstOrDefault();
+                    var usr = self.Channels[chn].Users.Where(function(u) {return u.Nick == msg.From.Parts[0]; }).FirstOrDefault();
 
                     if (usr)
                     {
-                        this.Channels[chn].Users.Remove(usr);
+                        self.Channels[chn].Users.Remove(usr);
                         channels.push(chn.Key);
                     }
 
@@ -490,7 +495,7 @@ function Server(ctx, me, connection) {
                 var quit = new QuitMessage(msg);
                 quit.Channels = channels;
 
-                this.Events.emit('OnCloseChannelPart', this, quit);
+                self.Events.emit('OnCloseChannelPart', this, quit);
                 break;
             // ///
             // END QUIT
@@ -502,8 +507,8 @@ function Server(ctx, me, connection) {
             case "KICK":
                 // :from kick #channel nick :Reason (optional)
 
-                this.Channels[msg.Parts[2]].Users.Remove(this.Channels[msg.Parts[2]].Users.Where(function(u) { return u.Nick == msg.Parts[3]; }).First());
-                this.Events.emit('OnKick', this, msg);
+                self.Channels[msg.Parts[2]].Users.Remove(self.Channels[msg.Parts[2]].Users.Where(function(u) { return u.Nick == msg.Parts[3]; }).First());
+                self.Events.emit('OnKick', this, msg);
                 break;
             // ///
             // END KICK
@@ -517,15 +522,15 @@ function Server(ctx, me, connection) {
                                     
                 var nickchannels = []; // string
 
-                for (var chn in this.Channels)
+                for (var chn in self.Channels)
                 {
                     var usr = chn.Value.Users.Where(function(u) { return u.Nick == msg.From.Parts[0]; }).FirstOrDefault();
                     var usridx = chn.Value.Users.IndexOf(usr);
 
                     if (usr)
                     {
-                        this.Channels[chn.Value.Display].Users[usridx].Nick = nickmsg.To;
-                        this.Channels[chn.Value.Display].Users.Sort(sortuser);
+                        self.Channels[chn.Value.Display].Users[usridx].Nick = nickmsg.To;
+                        self.Channels[chn.Value.Display].Users.Sort(sortuser);
                         nickchannels.Add(chn.Key);
                     }
 
@@ -539,7 +544,7 @@ function Server(ctx, me, connection) {
                 }
 
                 nickmsg.Channels = nickchannels;
-                this.Events.emit('OnNickChange', this, nickmsg);
+                self.Events.emit('OnNickChange', this, nickmsg);
                 break;
             // ///
             // END NICK
@@ -554,7 +559,7 @@ function Server(ctx, me, connection) {
                 var paramsindex = 4;
                 var adding = true;
 
-                var prefixz = this.Attributes["PREFIX_PREFIXES"];
+                var prefixz = self.Attributes["PREFIX_PREFIXES"];
                 var start = modesstring[0] == ':' ? 1 : 0;
                 for (var i = start; i < modesstring.length; i++)
                 {
@@ -574,9 +579,9 @@ function Server(ctx, me, connection) {
                     mode.Display = mode.Character = modesstring[i];
                     mode.ModificationType = adding ? ModeModificationType.Adding : ModeModificationType.Removing;
 
-                    if (this.Attributes["CHANMODES_A"].Contains(modesstring[i].toString()) ||
-                        this.Attributes["CHANMODES_B"].Contains(modesstring[i].toString()) ||
-                        this.Attributes["CHANMODES_C"].Contains(modesstring[i].toString()))
+                    if (self.Attributes["CHANMODES_A"].indexOf(modesstring[i].toString() > -1) ||
+                        self.Attributes["CHANMODES_B"].indexOf(modesstring[i].toString() > -1) ||
+                        self.Attributes["CHANMODES_C"].indexOf(modesstring[i].toString()) > -1)
                     {
                         mode.Argument = msg.Parts[paramsindex++];
                     }
@@ -587,39 +592,39 @@ function Server(ctx, me, connection) {
 
                     mode.Character = modesstring[i];
 
-                    if (msg.Parts[2] != me.Nick && this.Attributes["PREFIX_MODES"].indexOf(modesstring[i].ToString()) != -1)
+                    if (msg.Parts[2] != me.Nick && self.Attributes["PREFIX_MODES"].indexOf(modesstring[i].toString()) != -1)
                     {
                         mode.Type = ModeType.User;
                         mode.Argument = msg.Parts[paramsindex++];
 
-                        mode.Character = this.Attributes["PREFIX_PREFIXES"][this.Attributes["PREFIX_MODES"].IndexOf(mode.Character)];
+                        mode.Character = self.Attributes["PREFIX_PREFIXES"][self.Attributes["PREFIX_MODES"].IndexOf(mode.Character)];
 
-                        var userid = this.Channels[msg.Parts[2]].Users.WhereId(function(u) { return u.Item.Nick == mode.Argument; }).First();
+                        var userid = self.Channels[msg.Parts[2]].Users.WhereId(function(u) { return u.Item.Nick == mode.Argument; }).First();
 
                         if (mode.ModificationType == ModeModificationType.Removing)
                         {
-                            this.Channels[msg.Parts[2]].Users[userid].Modes.
-                                Remove(this.Channels[msg.Parts[2]].Users[userid].Modes.
-                                Where(function(m) { return m == mode.Character.ToString(); }).First());
+                            self.Channels[msg.Parts[2]].Users[userid].Modes.
+                                Remove(self.Channels[msg.Parts[2]].Users[userid].Modes.
+                                Where(function(m) { return m == mode.Character.toString(); }).First());
                         }
                         else
                         {
-                            this.Channels[msg.Parts[2]].Users[userid].Modes.push(mode.Character.ToString());
+                            self.Channels[msg.Parts[2]].Users[userid].Modes.push(mode.Character.toString());
 
-                            this.Channels[msg.Parts[2]].Users[userid].Modes.sort(function(s1, s2)
+                            self.Channels[msg.Parts[2]].Users[userid].Modes.sort(function(s1, s2)
                             {
                                 return prefixz.indexOf(s1[0]) - (prefixz.indexOf(s2[0]));
                             });
                         }
 
-                        this.Channels[msg.Parts[2]].Users.sort(sortuser);
+                        self.Channels[msg.Parts[2]].Users.sort(sortuser);
                     }
                     else if (msg.Parts[2] == me.Nick)
                     {
                         mode.Type = ModeType.UMode;
                         if (mode.ModificationType == ModeModificationType.Adding)
                         {
-                            me.Modes.push(mode.Character.ToString());
+                            me.Modes.push(mode.Character.toString());
                         }
                         else
                         {
@@ -631,30 +636,30 @@ function Server(ctx, me, connection) {
                         mode.Type = ModeType.Channel;
                         if (mode.ModificationType == ModeModificationType.Adding)
                         {
-                            this.Channels[msg.Parts[2]].Modes.Add(mode);
+                            self.Channels[msg.Parts[2]].Modes.Add(mode);
 
                             if (mode.Character == 'b')
                             {
-                                this.Events.emit('OnBan', this, msg);
+                                self.Events.emit('OnBan', this, msg);
                             }
                         }
                         else
                         {
-                            this.Channels[msg.Parts[2]].Modes.Remove
-                                (this.Channels[msg.Parts[2]].Modes.Where(function (m) { return m.Character == mode.Character &&
+                            self.Channels[msg.Parts[2]].Modes.Remove
+                                (self.Channels[msg.Parts[2]].Modes.Where(function (m) { return m.Character == mode.Character &&
                                     mode.Argument == m.Argument; }).First());
 
 
                             if (mode.Character == 'b')
                             {
-                                this.Events.emit('OnUnban', this, msg);
+                                self.Events.emit('OnUnban', this, msg);
                             }
                         }
                     }
-                    var modeMessage = new ModeMessage(msg);
+                    var modeMessage = new Evnts.ModeMessage(msg);
                     modeMessage.Mode = mode;
 
-                    this.Events.emit('OnModeChange', this, modeMessage);
+                    self.Events.emit('OnModeChange', this, modeMessage);
                 }
 
                 break;
@@ -670,9 +675,9 @@ function Server(ctx, me, connection) {
                 var jm_ = new JoinMessage(msg);
                 jm_.Channel = msg.Parts[3];
 
-                if (this.Channels[jm_.Channel].ChannelLoaded)
+                if (self.Channels[jm_.Channel].ChannelLoaded)
                 {
-                    this.Events.emit('OnNewChannelJoin', this, jm_);
+                    self.Events.emit('OnNewChannelJoin', this, jm_);
                 }
                 break;
             // ///
@@ -685,7 +690,7 @@ function Server(ctx, me, connection) {
             case "332":
                 var tmpchan;
 
-                tmpchan = this.Channels[sg.Parts[3]];
+                tmpchan = self.Channels[sg.Parts[3]];
 
                 if (!tmpchan)
                 {
@@ -696,8 +701,8 @@ function Server(ctx, me, connection) {
                 tmpchan.Topic = new Topic();
                 tmpchan.Topic.Display = msg.MessageLine;
 
-                this.Channels[msg.Parts[3]] = tmpchan;
-                this.Events.emit('OnTopic', this, msg);
+                self.Channels[msg.Parts[3]] = tmpchan;
+                self.Events.emit('OnTopic', this, msg);
                 break;
             // ///
             // END 322 Channel TOpic (OnJoin)
@@ -707,7 +712,7 @@ function Server(ctx, me, connection) {
             // BEGIN 333 Channel Topic set by and when (on join)
             // ***
             case "333": // Who set the topic and when they set it
-                var tmpchan2 = this.Channels[msg.Parts[3]];
+                var tmpchan2 = self.Channels[msg.Parts[3]];
 
                 if (!tmpchan2)
                 {
@@ -723,7 +728,7 @@ function Server(ctx, me, connection) {
 
                 tmpchan2.Topic.DateSet = new Date(msg.Parts[5] * 1000);
 
-                this.Channels[msg.Parts[3]] = tmpchan2;
+                self.Channels[msg.Parts[3]] = tmpchan2;
                 break;
             // ///
             // END 333 Channel Topic set by and when (on join)
@@ -733,8 +738,9 @@ function Server(ctx, me, connection) {
             // BEGIN 004
             // ***
             case "004": // Get Server Type
-                var values = Enum.GetValues(typeof(ServerType));
-                this.me.Nick = msg.Parts[2];
+                //var values = Enum.GetValues(typeof(ServerType));
+
+                me.Nick = msg.Parts[2];
                 serverType = ServerType.Unknown;
 
                 for( var serverType in ServerType)
@@ -759,7 +765,7 @@ function Server(ctx, me, connection) {
                     var key = String.Empty;
                     var value = String.Empty;
 
-                    if (msg.Parts[i].Contains("="))
+                    if (msg.Parts[i].indexOf("=") > -1)
                     {
                         var sep = msg.Parts[i].split('=');
                         key = sep[0];
@@ -771,14 +777,8 @@ function Server(ctx, me, connection) {
                         value = "true";
                     }
 
-                    if (!this.Attributes.indexOf(key) != -1)
-                    {
-                        this.Attributes.Add(key, value);
-                    }
-                    else
-                    {
-                        this.Attributes[key] = value;
-                    }
+                    self.Attributes[key] = value;
+
 
                     if (key == "NAMESX")
                     {
@@ -794,8 +794,8 @@ function Server(ctx, me, connection) {
                     {
                         var tosplit = value.substring(1);
                         var split = tosplit.split(')');
-                        this.Attributes.Add("PREFIX_MODES", split[0]);
-                        this.Attributes.Add("PREFIX_PREFIXES", split[1]);
+                        self.Attributes["PREFIX_MODES"] = split[0];
+                        self.Attributes["PREFIX_PREFIXES"] = split[1];
                         //
                     }
                     else if (key == "CHANMODES")
@@ -803,13 +803,13 @@ function Server(ctx, me, connection) {
                         var chanmodes = value.split(',');
 
                         // Mode that adds or removes nick or address to a list
-                        this.Attributes.Add("CHANMODES_A", chanmodes[0]);
+                        self.Attributes["CHANMODES_A"] = chanmodes[0];
                         // Changes a setting and always had a parameter
-                        this.Attributes.Add("CHANMODES_B", chanmodes[1]);
+                        self.Attributes["CHANMODES_B"] = chanmodes[1];
                         // Only has a parameter when set
-                        this.Attributes.Add("CHANMODES_C", chanmodes[2]);
+                        self.Attributes["CHANMODES_C"] = chanmodes[2];
                         // Never has a parameter
-                        this.Attributes.Add("CHANMODES_D", chanmodes[3]);
+                        self.Attributes["CHANMODES_D"] = chanmodes[3];
                     }
                 }
                 break;
@@ -829,7 +829,7 @@ function Server(ctx, me, connection) {
                     break;
 
                 // remove leading : so we can do a direct check
-                msg.Parts[4] = msg.Parts[4].Substring(1);
+                msg.Parts[4] = msg.Parts[4].substring(1);
 
                 for (var i = 4; i < msg.Parts.Count(); i++)
                 {
@@ -851,9 +851,9 @@ function Server(ctx, me, connection) {
             // ***
             case "306": // :irc.foonet.com 306 dabb :You have been marked as being away
 
-                this.Events.emit('OnAway', this, msg);
+                self.Events.emit('OnAway', this, msg);
             case "305": // :irc.foonet.com 305 dabb :You are no longer marked as being away
-                this.Events.emit('OnUnAway', this, msg);
+                self.Events.emit('OnUnAway', this, msg);
                 break;
             // ///
             // END AWAY/UNAWAY
@@ -864,7 +864,7 @@ function Server(ctx, me, connection) {
             // ***
             case "INVITE": // :dab!dabitp@dab.biz INVITE dabb :#dab
 
-                this.Events.emit('OnInvite', this, msg);
+                self.Events.emit('OnInvite', this, msg);
                 break;
             // ///
             // END INVITE
@@ -1050,7 +1050,7 @@ function Server(ctx, me, connection) {
                 var whomsg = new WhoisMessage(msg);
                 whomsg.Who = tempWhois;
 
-                this.Events.emit('OnWhoIs', this, msg);
+                self.Events.emit('OnWhoIs', this, msg);
                 break;
 
             // ///
@@ -1062,7 +1062,7 @@ function Server(ctx, me, connection) {
             // ***
             case "376":// End of MOTD. Meaning most spam is done. We can begin our adventure
             case "422": // No MOTD, but still, no more spam.
-                this.Events.emit('OnConnectionEstablished', this, msg);
+                self.Events.emit('OnConnectionEstablished', this, msg);
                 break;
             // ///
             // END Connection Established (End of MOTD or No MOTD)
@@ -1073,7 +1073,7 @@ function Server(ctx, me, connection) {
             // ***
             case "372":
             case "375":
-                this.Events.emit('OnMotd', this, msg);
+                self.Events.emit('OnMotd', this, msg);
                 break;
             // ///
             // END MOTD
@@ -1086,7 +1086,7 @@ function Server(ctx, me, connection) {
                 tempList = [];
                 break;
             case "322":
-                var le = new Events.ListEntry();
+                var le = new Evnts.ListEntry();
 
                 le.Channel = msg.Parts[3];
                 le.Users = parseInt(msg.Parts[4]);
@@ -1097,13 +1097,13 @@ function Server(ctx, me, connection) {
                 var lm = new EventListMessage(msg);
 
                 lm.Entries = tempList.ToArray();
-                this.Events.emit('OnList', this, lm);
+                self.Events.emit('OnList', this, lm);
                 break;
             // ///
             // END LIST
             // ///
             default:
-                this.Events.emit('OnUnhandledEvent', this, lm);
+                self.Events.emit('OnUnhandledEvent', this, lm);
                 break;
 
         }
@@ -1111,7 +1111,7 @@ function Server(ctx, me, connection) {
 
     var sortuser = function(u1, u2)
     {
-        var prefixes = this.Attributes["PREFIX_PREFIXES"];
+        var prefixes = self.Attributes["PREFIX_PREFIXES"];
 
         if (u1.Modes.Count() == 0)
         {
@@ -1138,3 +1138,8 @@ function Server(ctx, me, connection) {
     }
 
 }
+
+System.Javascript.Inherit(System.Object, Server);
+
+//exports.System = { "Javascript": { "CheckedProperty" : CheckedProperty } };
+module.exports = Server;
