@@ -1141,7 +1141,7 @@ function Server(ctx, me, connection) {
             // END LIST
             // ///
             default:
-                self.Events.emit('OnUnhandledEvent', self, lm);
+                self.Events.emit('OnUnhandledEvent', self, msg);
                 break;
 
         }
