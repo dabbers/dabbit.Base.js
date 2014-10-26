@@ -1,5 +1,5 @@
 ﻿var System = require("all")("System");
-var Server = require("./Server");
+
 var Topic = require("./Topic");
 
 function Channel(svr) {
@@ -9,7 +9,8 @@ function Channel(svr) {
     if (!svr) {
         throw new System.ArgumentException("svr cannot be null");
     }
-    
+
+    var Server = require("./Server");
     svr = new System.Javascript.CheckedProperty(svr, Server);
 
     this.Name = String.Empty;

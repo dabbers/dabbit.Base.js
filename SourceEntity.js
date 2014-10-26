@@ -1,8 +1,12 @@
 var System = new require("all")("System");
+var User = require('./User');
 
-function SourceEntity(parts, sourceType) {
+function SourceEntity(prts, sourceType) {
     // Indicates object inheritance.
     System.Object.call(this);
+
+    var fromType;
+    var parts;
 
     this.__defineGetter__("Type", function() { // GUID
         return fromType;
@@ -12,11 +16,17 @@ function SourceEntity(parts, sourceType) {
         return parts;
     });
 
-    fromType = sourceType;
-    parts = parts;
+    if (sourceType == null && prts instanceof User)
+    {
+        parts = [ prts.Nick, prts.Ident, prts.Host ];
+        fromType = "Client";
+    }
+    else
+    {
+        fromType = sourceType || "Client";
+        parts = prts;   
+    }
 
-    var fromType;
-    var parts;
 }
 System.Javascript.Inherit(System.Object, SourceEntity);
 

@@ -6,6 +6,7 @@ var ModeModificationType = require('./ModeModificationType');
 var NickChangeMessage = Evnts.NickChangeMessage;
 
 var User = require('./User');
+var Channel = require('./Channel');
 var Connection = require('./Connection');
 var Mode = require('./Mode');
 
@@ -19,11 +20,13 @@ var SourceEntity = require('./SourceEntity');
 var SourceEntityType = require('./SourceEntityType');
 var IContext = require('./IContext');
 
+
 function Server(ctx, me, connection) {
     Object.call(this);
 
     var tempWhois = {};
     var tempList = [];
+    var whoisLibraryRequested = [];
 
     var serverType = ServerType.Unknown; // ServerType
     connection = new System.Javascript.CheckedProperty(connection, Connection); // Connection
@@ -143,17 +146,16 @@ function Server(ctx, me, connection) {
                 // We are parsing a message to a channel
                 pvm.To = new SourceEntity([msg.Parts[2] ], SourceEntityType.Channel);
 
-                if (self.Attributes["STATUSMSG"].indexOf(msg.Parts[2][0].toString()) != -1)
-                {
-                    // Check for a wallops message (+#channel)
-                    pvm.Wall = msg.Parts[2][0].toString();
+                while (self.Attributes["STATUSMSG"].indexOf(msg.Parts[2][0].toString()) != -1) {
+                    pvm.Wall += msg.Parts[2][0].toString();
                     msg.Parts[2] = msg.Parts[2].substring(1);
 
-                    pvm.To = new SourceEntity([msg.Parts[2]], SourceEntityType.Channel);
                 }
 
                 if (self.Attributes["CHANTYPES"].indexOf(pvm.Parts[2][0].toString()) != -1)
                 {
+                    pvm.To = new SourceEntity([msg.Parts[2]], SourceEntityType.Channel);
+                    
                     if (msg.Parts[3] == ":\001ACTION")
                     {
                         msg.MessageLine = msg.MessageLine.substring(8, msg.MessageLine.length - 10);
@@ -915,7 +917,7 @@ function Server(ctx, me, connection) {
             case "311": // :hyperion.gamergalaxy.net 311 dabbb dab dabitp dab.biz * :David
 
                 // Either never done a whois before or recycle old whois result
-                // Meaning the whois is not thre`ad safe.
+                // Meaning the whois is not thread safe.
                 if (!tempWhois || tempWhois.Nick != msg.Parts[3])
                 {
                     tempWhois = ctx.Value.CreateUser();
@@ -925,6 +927,12 @@ function Server(ctx, me, connection) {
                 tempWhois.Ident = msg.Parts[4];
                 tempWhois.Host = msg.Parts[5];
                 tempWhois.Name = msg.MessageLine;
+
+                if (tempWhois.Nick == self.Me.Nick)
+                {
+                    self.Me.Ident = tempWhois.Ident;
+                    self.Me.Host = tempWhois.Host;
+                }
 
                 break;
             case "378": // (IRCOP Message) :simmons.freenode.net 378 ivazquez ivazquez :is connecting from *@host ip
@@ -975,16 +983,13 @@ function Server(ctx, me, connection) {
 
                 tempWhois.Channels = [];
 
-                msg.Parts[4] = msg.Parts[4].Substring(1);
+                msg.Parts[4] = msg.Parts[4].substring(1);
 
                 for (var i = 4; i < msg.Parts.Count(); i++)
                 {
                     // This channel doesn't represent a gui item
-                    var chan319 = new Channel(self);
-                    chan319.Name = msg.Parts[i];
-                    chan319.Display = msg.Parts[i];
-
-                    tempWhois.Channels.Add(chan319);
+                    
+                    tempWhois.Channels.push(msg.Parts[i]);
                 }
 
                 break;
@@ -1067,16 +1072,21 @@ function Server(ctx, me, connection) {
                             <- :irc.botsites.net 401 dab sdfasdfasdf :No such nick/channel
                             <- :irc.botsites.net 318 dab sdfasdfasdf :End of /WHOIS list.
                             */
-
-                if (tempWhois && tempWhois.Nick != msg.Parts[3])
+                // Not sure what this condition is supposed to prevent?
+                /*if (tempWhois && tempWhois.Nick != msg.Parts[3])
                 {
                     tempWhois = null;
-                }
+                }*/
 
-                var whomsg = new WhoisMessage(msg);
+                var whomsg = new Evnts.WhoisMessage(msg);
                 whomsg.Who = tempWhois;
 
-                self.Events.emit('OnWhoIs', self, msg);
+                if (whoisLibraryRequested.indexOf(tempWhois.Nick) == -1)
+                {
+                    self.Events.emit('OnWhoIs', self, whomsg);
+                }
+                whoisLibraryRequested.Remove(tempWhois.Nick);
+                tempWhois = null;
                 break;
 
             // ///
@@ -1089,6 +1099,8 @@ function Server(ctx, me, connection) {
             case "376":// End of MOTD. Meaning most spam is done. We can begin our adventure
             case "422": // No MOTD, but still, no more spam.
                 self.Events.emit('OnConnectionEstablished', self, msg);
+                self.Connection.Write("WHOIS " + self.Me.Nick);
+                whoisLibraryRequested.push(self.Me.Nick);
                 break;
             // ///
             // END Connection Established (End of MOTD or No MOTD)
