@@ -6,8 +6,6 @@ var System = require("all")("System");
 function AlreadyConnectedException()
 {
 	System.Exception.call(this, "Cannot connect to the server when there is already a connection");
-
-
 }
 System.Javascript.Inherit(System.Exception, AlreadyConnectedException);
 

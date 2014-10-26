@@ -21,7 +21,7 @@ function JoinMessage(old) // Message param
             old.Parts[2] = old.Parts[2].substring(1);
         }
 
-        this.Channel = old.Parts[2];
+        this.Channel = old.Parts[2].toLowerCase();
     }
 }
 System.Javascript.Inherit(Message, JoinMessage);

@@ -139,7 +139,7 @@ function Connection(inCtx, socket) {
         {
             msg.From = new SourceEntity([ fromParts[0].substring(1) ], SourceEntityType.Server);
         }
-        
+
         self.RawMessageReceived(msg);
     }
 

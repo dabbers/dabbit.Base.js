@@ -6,9 +6,11 @@ function Channel(svr) {
     // Indicates object inheritance.
     System.Object.call(this);
     
-    if (!svr || svr.GetType() != "Server") {
-        throw new System.ArgumentException("Invalid Server Parameter svr");
+    if (!svr) {
+        throw new System.ArgumentException("svr cannot be null");
     }
+    
+    svr = new System.Javascript.CheckedProperty(svr, Server);
 
     this.Name = String.Empty;
     this.Modes = [];
@@ -26,7 +28,7 @@ function Channel(svr) {
     var created = new System.Javascript.CheckedProperty(new Date(), Date);
 
     this.__defineGetter__("ServerOf", function() {
-        return server.Value;
+        return svr.Value;
     });
 
     this.__defineGetter__("ChannelLoaded", function() {
@@ -46,7 +48,6 @@ function Channel(svr) {
         return this.Name;
     }
 
-    var server = new System.Javascript.CheckedProperty(svr, Server);
 
 }
 System.Javascript.Inherit(System.Object, Channel);

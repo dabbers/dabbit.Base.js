@@ -16,6 +16,9 @@ function NickChangeMessage(old) {
     this.Timestamp = old.Timestamp;
 
     this.To = old.Parts[2];
+    if (this.To[0] == ':') {
+        this.To = this.To.substring(1);
+    }
 }
 System.Javascript.Inherit(Message, NickChangeMessage);
 
