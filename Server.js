@@ -145,7 +145,7 @@ function Server(ctx, me, connection) {
 
                 // We are parsing a message to a channel
                 pvm.To = new SourceEntity([msg.Parts[2] ], SourceEntityType.Channel);
-
+                pvm.Wall = "";
                 while (self.Attributes["STATUSMSG"].indexOf(msg.Parts[2][0].toString()) != -1) {
                     pvm.Wall += msg.Parts[2][0].toString();
                     msg.Parts[2] = msg.Parts[2].substring(1);
@@ -155,7 +155,7 @@ function Server(ctx, me, connection) {
                 if (self.Attributes["CHANTYPES"].indexOf(pvm.Parts[2][0].toString()) != -1)
                 {
                     pvm.To = new SourceEntity([msg.Parts[2]], SourceEntityType.Channel);
-                    
+
                     if (msg.Parts[3] == ":\001ACTION")
                     {
                         msg.MessageLine = msg.MessageLine.substring(8, msg.MessageLine.length - 10);
@@ -1067,6 +1067,9 @@ function Server(ctx, me, connection) {
 
                 break;
             case "401": // No such nick
+                    tempWhois = ctx.Value.CreateUser();
+                    tempWhois.Nick = msg.MessageLine + " " + msg.Parts[3];
+                break;
             case "318": // End of WHOIS results
                             /*
                             <- :irc.botsites.net 401 dab sdfasdfasdf :No such nick/channel
