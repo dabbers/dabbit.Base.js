@@ -1,9 +1,6 @@
-var System = new require("all")("System");
 var User = require('./User');
 
 function SourceEntity(prts, sourceType) {
-    // Indicates object inheritance.
-    System.Object.call(this);
 
     var fromType;
     var parts;
@@ -28,6 +25,5 @@ function SourceEntity(prts, sourceType) {
     }
 
 }
-System.Javascript.Inherit(System.Object, SourceEntity);
 
 module.exports = SourceEntity

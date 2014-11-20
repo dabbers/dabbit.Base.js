@@ -6,7 +6,7 @@ function Mode() {
 
     this.Display = '';
 
-    this.Argument = String.Empty;
+    this.Argument = "";
 
     this.Type = ModeType.User;
 

@@ -1,5 +1,5 @@
-var System = require('all')('System');
 var Message = require('../Message');
+var util = require("util");
 
 function WhoisMessage(old) {
     Message.call(this);
@@ -13,6 +13,6 @@ function WhoisMessage(old) {
     this.RawLine = old.RawLine;
     this.Timestamp = old.Timestamp;
 }
-System.Javascript.Inherit(Message, WhoisMessage);
+util.inherits(WhoisMessage, Message);
 
 module.exports = WhoisMessage;

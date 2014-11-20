@@ -1,11 +1,12 @@
-var System = require('all')('System');
 var Message = require('../Message');
 var SourceEntityType = require('../SourceEntityType');
+var util = require("util");
+
 
 function JoinMessage(old) // Message param
 {
     Message.call(this);
-    this.Channel = String.Empty;
+    this.Channel = "";
 
     this.From = old.From;
     this.Command = old.Command;
@@ -24,6 +25,6 @@ function JoinMessage(old) // Message param
         this.Channel = old.Parts[2].toLowerCase();
     }
 }
-System.Javascript.Inherit(Message, JoinMessage);
+util.inherits(JoinMessage, Message);
 
 module.exports = JoinMessage;

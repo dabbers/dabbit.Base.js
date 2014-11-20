@@ -1,20 +1,16 @@
-﻿var System = require("all")("System");
-var SourceEntityType = require('./SourceEntityType');
+﻿var SourceEntityType = require('./SourceEntityType');
 
 function User(se) {
-    Object.call(this);
+    this.Nick = "";
+    this.Ident = "";
 
+    this.Host = "";
 
-    this.Nick = String.Empty;
-    this.Ident = String.Empty;
-
-    this.Host = String.Empty;
-
-    this.IdentifiedAs = String.Empty;
+    this.IdentifiedAs = "";
     this.Modes = []; // Modes
     this.Channels = []; //Channel
 
-    this.Name = String.Empty;
+    this.Name = "";
 
     this.__defineGetter__("Display", function() {
         return (this.Modes.length > 0 ? this.Modes[0] : "") + this.Nick;
@@ -22,7 +18,7 @@ function User(se) {
 
     this.IrcOp = false;
     this.Identified = false;
-    this.Server = String.Empty;
+    this.Server = "";
     this.IdleTime = 0;
 
     this.SignedOn = new Date();
@@ -33,17 +29,15 @@ function User(se) {
         if (se.Type != SourceEntityType.Client) {
             this.Nick = se.Parts[0];
             this.Host = se.Parts[0];
-            this.Ident = String.Empty;
-            this.Name = String.Empty;
+            this.Ident = "";
+            this.Name = "";
         }
         else {
             this.Nick = se.Parts[0];
             this.Ident = se.Parts[1];
             this.Host = se.Parts[2];
-            this.Name = String.Empty;
+            this.Name = "";
         }
     }
 }
-System.Javascript.Inherit(System.Object, User);
-
 module.exports = User;

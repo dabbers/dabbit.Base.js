@@ -1,49 +1,44 @@
-﻿var System = new require("all")("System");
-var AlreadyConnectedException = require('./AlreadyConnectedException');
+﻿var AlreadyConnectedException = require('./AlreadyConnectedException');
 var Message = require('./Message');
 var SourceEntity = require('./SourceEntity');
 var SourceEntityType = require('./SourceEntityType');
 var IContext = require('./IContext');
 var ISocketWrapper = require('./ISocketWrapper');
-function Connection(inCtx, socket) {
-    System.Object.call(this);
 
+function Connection(inCtx, socket) {
     var messages = []; // new Stack<Message>();
-    var ctx = new System.Javascript.CheckedProperty(inCtx, IContext);
+    var ctx = inCtx;
     
     if (!inCtx) {
-        throw new System.ArgumentException("Context cannot be null");
+        throw "Context cannot be null";
     }
-    ctx.Value = inCtx;
 
-    var socketWrapper = new System.Javascript.CheckedProperty(socket, (ISocketWrapper)); // ISocketWrapper
+    var socketWrapper = socket; // ISocketWrapper
     if (!socket) {
-        throw new System.ArgumentException("Socket cannot be null");
+        throw "Socket cannot be null";
     }
-    socketWrapper.Value = socket;
 
     this.__defineGetter__("Host", function() { // string
-        return socketWrapper.Value.Host;
+        return socketWrapper.Host;
     });
     this.__defineGetter__("Port", function() { // number
-        return socketWrapper.Value.Port;
+        return socketWrapper.Port;
     });
     this.__defineGetter__("Secure", function() { // bool
-        return socketWrapper.Value.Port;
+        return socketWrapper.Port;
     });
 
+    var id = generateUUID();
     this.__defineGetter__("Id", function() { // GUID
         return id;
     });
-    var id = new System.GUID();
 
     this.__defineGetter__("Async", function() { // bool
-        return socketWrapper.Value.Port;
+        return socketWrapper.Port;
     });
-    var id = new System.GUID();
 
     this.__defineGetter__("Connected", function() { // bool
-        return socketWrapper.Value.Connected;
+        return socketWrapper.Connected;
     });
 
     this.RawMessageReceived = function() { } // Callback for any message received
@@ -63,7 +58,7 @@ function Connection(inCtx, socket) {
 
         // Connect to our server providing our own data parsing method for the callback.
         // our callback will call their callback when we've placed the line into a nicely packaged object
-        socketWrapper.Value.ConnectAsync(onRead);
+        socketWrapper.ConnectAsync(onRead);
     }
 
     /// <summary>
@@ -72,8 +67,8 @@ function Connection(inCtx, socket) {
     this.Disconnect = function(quitmsg) {
         this.Write(quitmsg || "QUIT :dabbit IRC Client. Get it today! http://dabb.it");
 
-        socketWrapper.Value.Disconnect();
-        socketWrapper.Value = ctx.CreateSocket(socketWrapper.Value.Host, socketWrapper.Value.Port, socketWrapper.Value.Secure);
+        socketWrapper.Disconnect();
+        socketWrapper = ctx.CreateSocket(socketWrapper.Host, socketWrapper.Port, socketWrapper.Secure);
     }
 
     var self = this;
@@ -83,7 +78,7 @@ function Connection(inCtx, socket) {
         msg.Timestamp = new Date();
         msg.RawLine = data.toString();
 
-        if (String.IsNullOrEmpty(msg.RawLine))
+        if (!msg.RawLine)
         {
             return;
         }
@@ -109,7 +104,7 @@ function Connection(inCtx, socket) {
 
         for( i = 1; i < messages.length; i++) {
 
-            if (String.IsNullOrEmpty(messages[i]))
+            if (!messages[i])
                 continue;
 
             if (messages[i][0] == ':')
@@ -121,7 +116,7 @@ function Connection(inCtx, socket) {
                 temp += messages[i] + " ";
         }
 
-        temp = String(temp).TrimEnd();
+        temp = TrimEnd(String(temp));
 
         if (found)
             msg.MessageLine = temp.substring(1);
@@ -144,11 +139,26 @@ function Connection(inCtx, socket) {
     }
 
     this.Write = function(message) {
-        socketWrapper.Value.Writer.write(message + "\r\n");
-        //socketWrapper.Value.Writer.Flush();
+        socketWrapper.Writer.write(message + "\r\n");
     }
 }
-System.Javascript.Inherit(System.Object, Connection);
 
+// http://stackoverflow.com/a/8809472/486058
+function generateUUID(){
+    var d = new Date().getTime();
+    var uuid = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+        var r = (d + Math.random()*16)%16 | 0;
+        d = Math.floor(d/16);
+        return (c=='x' ? r : (r&0x7|0x8)).toString(16);
+    });
+    return uuid;
+};
+
+function TrimEnd(str) {
+    c = ' ';
+    var i=str.length-1;
+    for(;i>=0 && (str.charAt(i)==" " || str.charAt(i)=="\r" || str.charAt(i)=="\n" ) ;i--);
+    return str.substring(0,i+1);
+}
 
 module.exports = Connection;

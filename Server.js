@@ -1,6 +1,4 @@
-﻿
-var System = require('all')('System');
-var Evnts = require('all')('dabbit/Base/Events');
+﻿var Evnts = require('all')('dabbit/Base/Events');
 var events = require('events');
 var ModeModificationType = require('./ModeModificationType');
 var NickChangeMessage = Evnts.NickChangeMessage;
@@ -19,7 +17,7 @@ var RawReplies = require('./RawReplies');
 var SourceEntity = require('./SourceEntity');
 var SourceEntityType = require('./SourceEntityType');
 var IContext = require('./IContext');
-
+require('./g_ArrayExtensions');
 
 function Server(ctx, me, connection) {
     Object.call(this);
@@ -29,11 +27,9 @@ function Server(ctx, me, connection) {
     var whoisLibraryRequested = [];
 
     var serverType = ServerType.Unknown; // ServerType
-    connection = new System.Javascript.CheckedProperty(connection, Connection); // Connection
 
-    ctx = new System.Javascript.CheckedProperty(ctx, IContext); // IContext type
-    if (!ctx.Value) {
-        throw new System.ArgumentException("ctx cannot be null");
+    if (!ctx) {
+        throw "ctx cannot be null";
     }
 
     var multiModes = false; // bool
@@ -48,10 +44,10 @@ function Server(ctx, me, connection) {
     this.Channels = {};
 
     this.__defineGetter__("Connection", function() {
-        return connection.Value;
+        return connection;
     });
     this.__defineSetter__("Connection", function(val) {
-        connection.Value = value;
+        connection = value;
     });
     
     this.Password = "";
@@ -74,20 +70,19 @@ function Server(ctx, me, connection) {
         return serverType;
     });
 
-    me = new System.Javascript.CheckedProperty(me, User);
-    if (me.Value.Modes == null) {
-        me.Value.Modes = [];
+    if (me.Modes == null) {
+        me.Modes = [];
     }
 
     this.__defineGetter__("Me", function() {
-        return me.Value;
+        return me;
     });
 
     this.Channels = {}; //new Dictionary<string, Channel>(StringComparer.CurrentCultureIgnoreCase);
     this.OnNumeric = {}; //new Dictionary<RawReplies, IrcEventHandler>();
 
     // Add prefined and used attributes
-    this.Attributes["NETWORK"] = connection.Value.Host;
+    this.Attributes["NETWORK"] = connection.Host;
 
     this.Attributes["STATUSMSG"] = "";
     this.Attributes["CHANTYPES"] = "";
@@ -96,17 +91,17 @@ function Server(ctx, me, connection) {
 
     this.PerformConnect = function() {
 
-        connection.Value.ConnectAsync(rawMessageReceived);
+        connection.ConnectAsync(rawMessageReceived);
 
-        connection.Value.Write("CAP LS"); // Get list of extras (For multi prefix)
+        connection.Write("CAP LS"); // Get list of extras (For multi prefix)
         
-        if (!String.IsNullOrEmpty(self.Password))
+        if (self.Password)
         {
-            connection.Value.Write("PASS " + self.Password);
+            connection.Write("PASS " + self.Password);
         }
 
-        connection.Value.Write("NICK " + self.Me.Nick);
-        connection.Value.Write("USER " + self.Me.Ident + " * * :" + self.Me.Name);
+        connection.Write("NICK " + self.Me.Nick);
+        connection.Write("USER " + self.Me.Ident + " * * :" + self.Me.Name);
     }
 
     /*
@@ -259,7 +254,7 @@ function Server(ctx, me, connection) {
             // BEGIN PING/ERROR
             // ***
             case "PING":
-                connection.Value.Write("PONG " + msg.Parts[1]);
+                connection.Write("PONG " + msg.Parts[1]);
                 break;
             case "ERROR":
                 self.Events.emit('OnError', self, msg);
@@ -280,7 +275,7 @@ function Server(ctx, me, connection) {
                     var value = self.Channels[jm.Channel];
 
                     if (!value) {
-                        value = ctx.Value.CreateChannel(self);
+                        value = ctx.CreateChannel(self);
                         value.Modes = [];
                         value.Users = [];
                         value.Topic = new Topic();
@@ -291,7 +286,7 @@ function Server(ctx, me, connection) {
                     value.Name = msg.Parts[2];
                     value.Display = value.Name;
 
-                    connection.Value.Write("MODE " + jm.Channel);
+                    connection.Write("MODE " + jm.Channel);
 
                     self.Channels[jm.Channel] = value;
 
@@ -299,7 +294,7 @@ function Server(ctx, me, connection) {
                 }
                 else
                 {
-                    var usr = ctx.Value.CreateUser(); // User
+                    var usr = ctx.CreateUser(); // User
                     usr.Nick = jm.From.Parts[0];
                     usr.Ident = jm.From.Parts[1];
                     usr.Host = jm.From.Parts[2];
@@ -348,7 +343,7 @@ function Server(ctx, me, connection) {
                     }
                     else
                     {
-                        mode.Argument = String.Empty;
+                        mode.Argument = "";
                     }
 
                     mode.Character = modes[i];
@@ -381,9 +376,7 @@ function Server(ctx, me, connection) {
                 self.Events.emit('329', self, msg);
 
                 break;
-            case "353": // /Names list item :hyperion.gamergalaxy.net 353 badddd = #dab :badddd BB-Aso
-                //msg.Parts[4] = msg.Parts[4].Substring(1);
-                
+            case "353": // /Names list item :hyperion.gamergalaxy.net 353 badddd = #dab :badddd BB-Aso                
                 var vall;
                 msg.Parts[4] = msg.Parts[4].toLowerCase();
 
@@ -406,10 +399,10 @@ function Server(ctx, me, connection) {
 
                 for (var i = 5; i < msg.Parts.length; i++)
                 {
-                    if (String.IsNullOrEmpty(msg.Parts[i]))
+                    if (!msg.Parts[i])
                         continue;
 
-                    var tempuser = ctx.Value.CreateUser();
+                    var tempuser = ctx.CreateUser();
                     tempuser.Modes = [];
 
                     if (self.HostInNames)
@@ -545,7 +538,7 @@ function Server(ctx, me, connection) {
                     {
                         self.Channels[chn].Users[usridx].Nick = nickmsg.To;
                         self.Channels[chn].Users.sort(sortuser);
-                        nickchannels.Add(chn);
+                        nickchannels.push(chn);
                     }
                 }
 
@@ -599,7 +592,7 @@ function Server(ctx, me, connection) {
                     }
                     else
                     {
-                        mode.Argument = String.Empty;
+                        mode.Argument = "";
                     }
 
                     mode.Character = modesstring[i];
@@ -623,7 +616,7 @@ function Server(ctx, me, connection) {
 
                             if (false == self.MultiModes)
                             {
-                               connection.Value.Write("NAMES " + msg.Parts[2]);
+                               connection.Write("NAMES " + msg.Parts[2]);
                             }
                         }
                         else
@@ -772,7 +765,7 @@ function Server(ctx, me, connection) {
 
                 for( var serverType in ServerType)
                 {
-                    if (msg.Parts[4].startsWith(serverType))
+                    if (msg.Parts[4].indexOf(serverType) == 0)
                     {
                         serverType = serverType;
                         break;
@@ -789,8 +782,8 @@ function Server(ctx, me, connection) {
             case "005":
                 for (var i = 3; i < msg.Parts.length; i++)
                 {
-                    var key = String.Empty;
-                    var value = String.Empty;
+                    var key = "";
+                    var value = "";
 
                     if (msg.Parts[i].indexOf("=") > -1)
                     {
@@ -809,12 +802,12 @@ function Server(ctx, me, connection) {
 
                     if (key == "NAMESX")
                     {
-                        connection.Value.Write("PROTOCTL NAMESX");
+                        connection.Write("PROTOCTL NAMESX");
                         multiModes = true;
                     }
                     else if (key == "UHNAMES")
                     {
-                        connection.Value.Write("PROTOCTL UHNAMES");
+                        connection.Write("PROTOCTL UHNAMES");
                         hostInNames = true;
                     } 
                     else if (key == "PREFIX")
@@ -862,12 +855,12 @@ function Server(ctx, me, connection) {
                 {
                     if (msg.Parts[i] == "multi-prefix")
                     {
-                        connection.Value.Write("CAP REQ :multi-prefix");
+                        connection.Write("CAP REQ :multi-prefix");
                         break;
                     }
                 }
 
-                connection.Value.Write("CAP END");
+                connection.Write("CAP END");
                 break;
             // /// 
             // END CAP
@@ -920,7 +913,7 @@ function Server(ctx, me, connection) {
                 // Meaning the whois is not thread safe.
                 if (!tempWhois || tempWhois.Nick != msg.Parts[3])
                 {
-                    tempWhois = ctx.Value.CreateUser();
+                    tempWhois = ctx.CreateUser();
                     tempWhois.Nick = msg.Parts[3];
                 }
 
@@ -940,11 +933,11 @@ function Server(ctx, me, connection) {
                 // Meaning the whois is not thread safe.
                 if (!tempWhois || tempWhois.Nick != msg.Parts[3])
                 {
-                    tempWhois = ctx.Value.CreateUser();
+                    tempWhois = ctx.CreateUser();
                     tempWhois.Nick = msg.Parts[3];
                 }
 
-                tempWhois.Attributes.Add(msg.MessageLine);
+                tempWhois.Attributes.push(msg.MessageLine);
 
                 break;
             case "379": // :irc.foonet.com 379 dab dab :is using modes +iowghaAsxN +kcfvGqso
@@ -952,12 +945,12 @@ function Server(ctx, me, connection) {
                 // Meaning the whois is not thread safe.
                 if (!tempWhois || tempWhois.Nick != msg.Parts[3])
                 {
-                    tempWhois = ctx.Value.CreateUser();
+                    tempWhois = ctx.CreateUser();
                     tempWhois.Nick = msg.Parts[3];
                 }
 
                 tempWhois.Modes = [];
-                tempWhois.Modes.Add(msg.Parts[7] + " " + (msg.Parts.Count() > 8 ? msg.Parts[8] : ""));
+                tempWhois.Modes.push(msg.Parts[7] + " " + (msg.Parts.Count() > 8 ? msg.Parts[8] : ""));
 
                 break;
             case "307": // :registered nick?
@@ -965,7 +958,7 @@ function Server(ctx, me, connection) {
                 // Meaning the whois is not thread safe.
                 if (!tempWhois || tempWhois.Nick != msg.Parts[3])
                 {
-                    tempWhois = ctx.Value.CreateUser();
+                    tempWhois = ctx.CreateUser();
                     tempWhois.Nick = msg.Parts[3];
                 }
 
@@ -977,7 +970,7 @@ function Server(ctx, me, connection) {
                 // Meaning the whois is not thread safe.
                 if (!tempWhois || tempWhois.Nick != msg.Parts[3])
                 {
-                    tempWhois = ctx.Value.CreateUser();
+                    tempWhois = ctx.CreateUser();
                     tempWhois.Nick = msg.Parts[3];
                 }
 
@@ -998,7 +991,7 @@ function Server(ctx, me, connection) {
                 // Meaning the whois is not thread safe.
                 if (!tempWhois || tempWhois.Nick != msg.Parts[3])
                 {
-                    tempWhois = ctx.Value.CreateUser();
+                    tempWhois = ctx.CreateUser();
                     tempWhois.Nick = msg.Parts[3];
                 }
 
@@ -1009,7 +1002,7 @@ function Server(ctx, me, connection) {
 
                 if (!tempWhois || tempWhois.Nick != msg.Parts[3])
                 {
-                    tempWhois = ctx.Value.CreateUser();
+                    tempWhois = ctx.CreateUser();
                     tempWhois.Nick = msg.Parts[3];
                 }
 
@@ -1021,12 +1014,12 @@ function Server(ctx, me, connection) {
                 // Meaning the whois is not thread safe.
                 if (!tempWhois || tempWhois.Nick != msg.Parts[3])
                 {
-                    tempWhois = ctx.Value.CreateUser();
+                    tempWhois = ctx.CreateUser();
                     tempWhois.Nick = msg.Parts[3];
                 }
 
                 tempWhois.IrcOp = true;
-                tempWhois.Attributes.Add(msg.MessageLine);
+                tempWhois.Attributes.push(msg.MessageLine);
 
                 break;
             case "310": // available for help
@@ -1034,10 +1027,10 @@ function Server(ctx, me, connection) {
                 // Meaning the whois is not thread safe.
                 if (!tempWhois || tempWhois.Nick != msg.Parts[3])
                 {
-                    tempWhois = ctx.Value.CreateUser();
+                    tempWhois = ctx.CreateUser();
                     tempWhois.Nick = msg.Parts[3];
                 }
-                tempWhois.Attributes.Add(msg.MessageLine);
+                tempWhois.Attributes.push(msg.MessageLine);
 
                 break;
             case "671": // secure connection
@@ -1045,11 +1038,11 @@ function Server(ctx, me, connection) {
                 // Meaning the whois is not thread safe.
                 if (!tempWhois || tempWhois.Nick != msg.Parts[3])
                 {
-                    tempWhois = ctx.Value.CreateUser();
+                    tempWhois = ctx.CreateUser();
                     tempWhois.Nick = msg.Parts[3];
                 }
 
-                tempWhois.Attributes.Add(msg.MessageLine);
+                tempWhois.Attributes.push(msg.MessageLine);
 
                 break;
             case "317": // idle time
@@ -1057,7 +1050,7 @@ function Server(ctx, me, connection) {
                 // Meaning the whois is not thread safe.
                 if (!tempWhois || tempWhois.Nick != msg.Parts[3])
                 {
-                    tempWhois = ctx.Value.CreateUser();
+                    tempWhois = ctx.CreateUser();
                     tempWhois.Nick = msg.Parts[3];
                 }
 
@@ -1067,7 +1060,7 @@ function Server(ctx, me, connection) {
 
                 break;
             case "401": // No such nick
-                    tempWhois = ctx.Value.CreateUser();
+                    tempWhois = ctx.CreateUser();
                     tempWhois.Nick = msg.MessageLine + " " + msg.Parts[3];
                 break;
             case "318": // End of WHOIS results
@@ -1132,12 +1125,12 @@ function Server(ctx, me, connection) {
                 le.Channel = msg.Parts[3];
                 le.Users = parseInt(msg.Parts[4]);
                 le.Topic = msg.MessageLine;
-                tempList.Add(le);
+                tempList.push(le);
                 break;
             case "323":
                 var lm = new EventListMessage(msg);
 
-                lm.Entries = tempList.ToArray();
+                lm.Entries = tempList;
                 self.Events.emit('OnList', self, lm);
                 break;
             // ///
@@ -1158,7 +1151,7 @@ function Server(ctx, me, connection) {
         {
             if (u2.Modes.Count() == 0)
             {
-                return u1.Nick.CompareTo(u2.Nick);
+                return CompareTo(u1.Nick, u2.Nick);
             }
             return 1;
         }
@@ -1172,7 +1165,7 @@ function Server(ctx, me, connection) {
 
         if (res == 0)
         {
-            res = u1.Nick.CompareTo(u2.Nick);
+            res = CompareTo(u1.Nick, u2.Nick);
         }
 
         return res;
@@ -1180,7 +1173,28 @@ function Server(ctx, me, connection) {
 
 }
 
-System.Javascript.Inherit(System.Object, Server);
 
-//exports.System = { "Javascript": { "CheckedProperty" : CheckedProperty } };
+function CompareTo(a, s) {
+  var f = a.toLowerCase();
+  s = s.toLowerCase();
+
+  var lon = (f.length > s.length ? f.length : s.length);
+
+
+  for(var i = 0; i < lon; i++)
+  {
+      if (!f[i])
+          return -1;
+      if (!s[i])
+          return 1;
+
+      if (f[i] < s[i])
+          return -1;
+      else if (f[i] > s[i])
+          return 1;
+  }
+  
+  return 0;
+}
+
 module.exports = Server;

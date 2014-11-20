@@ -1,6 +1,7 @@
 var System = require('all')('System');
 var Message = require('../Message');
 var SourceEntityType = require('../SourceEntityType');
+var util = require("util");
 
 function ModeMessage(old)
 {
@@ -16,6 +17,6 @@ function ModeMessage(old)
     this.RawLine = old.RawLine;
     this.Timestamp = old.Timestamp;
 }
-System.Javascript.Inherit(Message, ModeMessage);
+util.inherits(ModeMessage, Message);
 
 module.exports = ModeMessage;

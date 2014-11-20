@@ -1,5 +1,6 @@
 var System = require('all')('System');
 var Message = require('../Message');
+var util = require("util");
 
 function ListMessage(old) // Message
 {
@@ -13,6 +14,6 @@ function ListMessage(old) // Message
     this.RawLine = old.RawLine;
     this.Timestamp = old.Timestamp;
 }
-System.Javascript.Inherit(Message, ListMessage);
+util.inherits(ListMessage, Message);
 
 module.exports = ListMessage;

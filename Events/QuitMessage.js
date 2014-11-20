@@ -1,5 +1,6 @@
 var System = require('all')('System');
 var Message = require('../Message');
+var util = require("util");
 
 function QuitMessage(old) {
     Message.call(this);
@@ -13,6 +14,6 @@ function QuitMessage(old) {
     this.RawLine = old.RawLine;
     this.Timestamp = old.Timestamp;
 }
-System.Javascript.Inherit(Message, QuitMessage);
+util.inherits(QuitMessage, Message);
 
 module.exports = QuitMessage;

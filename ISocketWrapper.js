@@ -1,43 +1,37 @@
-﻿var System = require("all")("System");
-
-function ISocketWrapper() {
-    // Indicates object inheritance.
-    System.Object.call(this);
+﻿function ISocketWrapper() {
     
     // Request these attributes in the Constructor
 
     this.__defineGetter__("Host", function() {
-        throw new System.MustImplementException("CreateConnection");
+        throw "You must implement Host";
     });
 
     this.__defineGetter__("Port", function() {
-        throw new System.MustImplementException("CreateConnection");
+        throw "You must implement Port";
     });
 
     this.__defineGetter__("Secure", function() {
-        throw new System.MustImplementException("CreateConnection");
+        throw "You must implement Secure";
     });
 
     this.__defineGetter__("Connected", function() {
-        throw new System.MustImplementException("CreateConnection");
+        throw "You must implement Connected";
     });
 
     this.ConnectAsync = function() { 
-        throw new System.MustImplementException("CreateConnection");
+        throw "You must implement ConnectAsync";
     };
 
     this.Disconnect = function() {
-        throw new System.MustImplementException("CreateConnection");
+        throw "You must implement Disconnect";
     }
 
     this.__defineGetter__("Reader", function() {
-        throw new System.MustImplementException("CreateConnection");
+        throw "You must implement Reader";
     });
 
     this.__defineGetter__("Writer", function() {
-        throw new System.MustImplementException("CreateConnection");
+        throw "You must implement Writer";
     });
 }
-System.Javascript.Inherit(System.Object, ISocketWrapper);
-
 module.exports = ISocketWrapper;

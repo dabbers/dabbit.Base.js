@@ -2,6 +2,7 @@ var User = require('../User');
 var System = require('all')('System');
 var Message = require('../Message');
 var SourceEntityType = require('../SourceEntityType');
+var util = require("util");
 
 function PrivmsgMessage(old) {
     Message.call(this);
@@ -27,7 +28,7 @@ function PrivmsgMessage(old) {
     this.To; // SourceEntity
     this.Wall; // + % @ & ~ before the channel
 }
-System.Javascript.Inherit(Message, PrivmsgMessage);
+util.inherits(PrivmsgMessage, Message);
 
 module.exports = PrivmsgMessage;
 

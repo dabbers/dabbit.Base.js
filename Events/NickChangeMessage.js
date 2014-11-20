@@ -1,10 +1,11 @@
 var System = require('all')('System');
 var Message = require('../Message');
+var util = require("util");
 
 function NickChangeMessage(old) {
     Message.call(this);
     
-    this.To = String.Empty;
+    this.To = "";
 
     this.Channels = [];
 
@@ -20,6 +21,6 @@ function NickChangeMessage(old) {
         this.To = this.To.substring(1);
     }
 }
-System.Javascript.Inherit(Message, NickChangeMessage);
+util.inherits(NickChangeMessage, Message);
 
 module.exports = NickChangeMessage;
