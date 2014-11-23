@@ -18,7 +18,7 @@
     /// <param name="secure">bool is secure</param>
     /// <returns>A socket wrapper for a connection. This is platform dependant. This will not be in the same namespace</returns>
     this.CreateSocket = function(host, port, secure) {
-        throw "You must implement CreateSocket");
+        throw "You must implement CreateSocket";
     }
 
     this.AddServer = function(me, conn) {

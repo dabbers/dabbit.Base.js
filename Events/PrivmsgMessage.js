@@ -1,5 +1,4 @@
 var User = require('../User');
-var System = require('all')('System');
 var Message = require('../Message');
 var SourceEntityType = require('../SourceEntityType');
 var util = require("util");

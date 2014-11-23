@@ -1,4 +1,3 @@
-var System = require('all')('System');
 var Message = require('../Message');
 var util = require("util");
 
