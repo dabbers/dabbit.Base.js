@@ -1,0 +1,25 @@
+{
+  "name": "dabbit.base",
+  "version": "0.4.1",
+  "description": "A base IRC parsing and information storage library. Emits callbacks per event.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/dabbers/dabbit.Base.js.git"
+  },
+  "keywords": [
+    "irc",
+    "parsing",
+    "library",
+    "dabbit"
+  ],
+  "author": "dab <me@davidbarajas.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/dabbers/dabbit.Base.js/issues"
+  },
+  "homepage": "https://github.com/dabbers/dabbit.Base.js"
+}
