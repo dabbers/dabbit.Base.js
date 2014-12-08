@@ -1,25 +1,26 @@
-if (!Array.prototype.Where) {
-	Array.prototype.Where = function(lambda) {
+if (!global.Array_Where) {
+	global.Array_Where = function(array, lambda) {
 		var res = [];
 
-		for(var i = 0; i < this.length; i++)
+		for(var i = 0; i < array.length; i++)
 		{
-			if (lambda(this[i])) {
-				res.push(this[i]);
+			if (lambda(array[i])) {
+				res.push(array[i]);
 			}
 		}
 
 		return res;
 	}
 }
-if (!Array.prototype.WhereId) {
-	Array.prototype.WhereId = function(lambda) {
+
+if (!global.Array_WhereId) {
+	global.Array_WhereId = function(array, lambda) {
 		var res = [];
 
 		var found = false;
-		for(var i = 0; i < this.length; i++)
+		for(var i = 0; i < array.length; i++)
 		{
-			if (lambda(this[i])) {
+			if (lambda(array[i])) {
 				found = true;
 				res.push(i);
 			}
@@ -31,34 +32,17 @@ if (!Array.prototype.WhereId) {
 	}
 }
 
-if (!Array.prototype.First) {
-	Array.prototype.First = function() {
-		return this[0];
+if (!global.Array_FirstOrDefault) {
+	global.Array_FirstOrDefault = function(array, def) {
+		return array.length > 0 ? array[0] : def || {};
 	}
 }
 
-if (!Array.prototype.Add) {
-	Array.prototype.Add = function(value) {
-		this.push(value);
-	}
-}
-
-if (!Array.prototype.FirstOrDefault) {
-	Array.prototype.FirstOrDefault = function(def) {
-		return this.length > 0 ? this[0] : def || {};
-	}
-}
-if (!Array.prototype.Remove) {
-	Array.prototype.Remove = function(obj) {
-		var indx = this.indexOf(obj);
+if (!global.Array_Remove) {
+	global.Array_Remove = function(array, obj) {
+		var indx = array.indexOf(obj);
 		if (indx != -1) {
-			this.splice(indx, 1);
+			array.splice(indx, 1);
 		}
-	}
-}
-
-if (!Array.prototype.Count) {
-	Array.prototype.Count = function() {
-		return this.length;
 	}
 }

@@ -33,5 +33,9 @@
     this.__defineGetter__("Writer", function() {
         throw "You must implement Writer";
     });
+
+    this.write = function(msg) { 
+        throw "You must implement write";
+    };
 }
 module.exports = ISocketWrapper;

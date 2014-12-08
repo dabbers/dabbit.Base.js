@@ -1,5 +1,5 @@
 require('./g_ArrayExtensions');
-var Evnts = require('all')('dabbit/Base/Events');
+var Evnts = require('./Events');
 var ModeModificationType = require('./ModeModificationType');
 var NickChangeMessage = Evnts.NickChangeMessage;
 
@@ -51,16 +51,16 @@ function sortuser(u1, u2)
 {
     var prefixes = server.Attributes["PREFIX_PREFIXES"];
 
-    if (u1.Modes.Count() == 0)
+    if (u1.Modes.length == 0)
     {
-        if (u2.Modes.Count() == 0)
+        if (u2.Modes.length == 0)
         {
             return CompareTo(u1.Nick, u2.Nick);
         }
         return 1;
     }
 
-    if (u2.Modes.Count() == 0)
+    if (u2.Modes.length == 0)
     {
         return -1;
     }
@@ -76,7 +76,7 @@ function sortuser(u1, u2)
 }
 
 /*
- * the self variable needs to have a Me, Attributes, Channels, Connection, Events
+ * the self variable needs to have a Me, Attributes, Channels, Events, IsThisMe()
  *
  */
 function parse(self, ctx, msg)
@@ -127,32 +127,33 @@ function parse(self, ctx, msg)
                 {
                     self.Events.emit('OnChannelMessage', self, pvm);
                 }
-
-                break;
-            }
-
-            // A message is being sent to a non-channel which means it HAS to be going to us.
-            pvm.To = new SourceEntity(pvm.To.Parts, SourceEntityType.Client);
-
-            if (msg.Parts[3][1] == "\001")
-            {
-                // Remove ending \001
-                if (msg.MessageLine[msg.MessageLine.Length - 1] == '\u0001')
-                {
-                    var firstLength = msg.Parts[3].substring(2).length + 1; // length of ":\1WORD " 
-
-                    msg.MessageLine = msg.MessageLine.substring(9, msg.MessageLine.length - 1);
-                    var lastpart = msg.Parts[msg.Parts.Count() - 1];
-                    msg.Parts[msg.Parts.Count() - 1] = lastpart.substring(0, lastpart.length - 1);
-                }
-
-                self.Events.emit('OnQueryCtcp', self, pvm);
             }
             else
             {
-                self.Events.emit('OnQueryMessage', self, pvm);
+                // A message is being sent to a non-channel which means it HAS to be going to us.
+                pvm.To = new SourceEntity(pvm.To.Parts, SourceEntityType.Client);
+
+                if (msg.Parts[3][1] == "\001")
+                {
+                    // Remove ending \001
+                    if (msg.MessageLine[msg.MessageLine.Length - 1] == '\u0001')
+                    {
+                        var firstLength = msg.Parts[3].substring(2).length + 1; // length of ":\1WORD " 
+
+                        msg.MessageLine = msg.MessageLine.substring(9, msg.MessageLine.length - 1);
+                        var lastpart = msg.Parts[msg.Parts.length - 1];
+                        msg.Parts[msg.Parts.length - 1] = lastpart.substring(0, lastpart.length - 1);
+                    }
+
+                    self.Events.emit('OnQueryCtcp', self, pvm);
+                }
+                else
+                {
+                    self.Events.emit('OnQueryMessage', self, pvm);
+                }
             }
 
+            self.Events.emit('OnPrivmsg', self, pvm);
             break;
         // ///
         // END PRIVMSG
@@ -190,32 +191,33 @@ function parse(self, ctx, msg)
                 {
                     self.Events.emit('OnChannelMessageNotice', self, pvm);
                 }
-
-                break;
-            }
-
-            // A message is being sent to a non-channel which means it HAS to be going to us.
-            pvm.To = new SourceEntity(pvm.To.Parts, SourceEntityType.Client);
-
-            if (msg.Parts[3][1] == "\001")
-            {
-                var firstLength = msg.Parts[3].substring(2).length + 1; // length of ":\1WORD " 
-                // Remove ending \001
-                if (msg.MessageLine[msg.MessageLine.length - 1] == '\u0001')
-                {
-                    msg.MessageLine = msg.MessageLine.substring(firstLength, msg.MessageLine.length - 1);
-                    var lastpart = msg.Parts[msg.Parts.length - 1];
-                    msg.Parts[msg.Parts.length - 1] = lastpart.substring(0, lastpart.length - 1);
-                }
-
-                // CTCP Action
-                self.Events.emit('OnQueryCtcpNotice', self, pvm);
             }
             else
             {
-                self.Events.emit('OnQueryMessageNotice', self, pvm);
+                // A message is being sent to a non-channel which means it HAS to be going to us.
+                pvm.To = new SourceEntity(pvm.To.Parts, SourceEntityType.Client);
+
+                if (msg.Parts[3][1] == "\001")
+                {
+                    var firstLength = msg.Parts[3].substring(2).length + 1; // length of ":\1WORD " 
+                    // Remove ending \001
+                    if (msg.MessageLine[msg.MessageLine.length - 1] == '\u0001')
+                    {
+                        msg.MessageLine = msg.MessageLine.substring(firstLength, msg.MessageLine.length - 1);
+                        var lastpart = msg.Parts[msg.Parts.length - 1];
+                        msg.Parts[msg.Parts.length - 1] = lastpart.substring(0, lastpart.length - 1);
+                    }
+
+                    // CTCP Action
+                    self.Events.emit('OnQueryCtcpNotice', self, pvm);
+                }
+                else
+                {
+                    self.Events.emit('OnQueryMessageNotice', self, pvm);
+                }
             }
 
+            self.Events.emit('OnNotice', self, pvm);
             break;
         // ///
         // END NOTICE
@@ -271,7 +273,7 @@ function parse(self, ctx, msg)
                 usr.Modes = [];
                 
                 // TODO: Check for existing user first
-                if (self.Channels[jm.Channel].Users.Where(function(p) { return p.Nick == jm.From.Parts[0];}).length == 0) {
+                if (Array_Where(self.Channels[jm.Channel].Users, function(p) { return p.Nick == jm.From.Parts[0];}).length == 0) {
                     self.Channels[jm.Channel].Users.push(usr);
                     self.Channels[jm.Channel].Users.sort(sortuser);
                 }
@@ -318,7 +320,7 @@ function parse(self, ctx, msg)
                     mode.Argument = "";
                 }
 
-                if (chnl.Modes.Where(function(p) { p.Character == modes[i]}).length == 0) {
+                if (Array_Where(chnl.Modes, function(p) { p.Character == modes[i]}).length == 0) {
                     mode.Character = modes[i];
                     mode.Type = ModeType.Channel;
                     chnl.Modes.push(mode);
@@ -337,11 +339,6 @@ function parse(self, ctx, msg)
         // ***
         case "329": // navi.gamergalaxy.net 329 dab #TBN 1403649503
             msg.Parts[3] = msg.Parts[3].toLowerCase();
-
-            if (!chan329Val) {
-                return;
-            }
-
             self.Channels[msg.Parts[3]].Created = new Date(msg.Parts[4] * 1000);
             break;
         case "353": // /Names list item :hyperion.gamergalaxy.net 353 badddd = #dab :badddd BB-Aso                
@@ -374,7 +371,7 @@ function parse(self, ctx, msg)
 
                 if (self.HostInNames) {
                     var nick = msg.Parts[i].split('!');
-                    if (nick.Count() > 1)
+                    if (nick.length > 1)
                     {
                         var identhost = nick[1].split('@');
                         tempuser.Nick = nick[0];
@@ -404,7 +401,7 @@ function parse(self, ctx, msg)
                 //JoinMessage xinmsg = new JoinMessage(msg);
                 //joinmsg.Channel = msg.Parts[3];
 
-                var isExistingUserId = vall.Users.WhereId(function(p) { return p.Nick == tempuser.Nick; } ).First();
+                var isExistingUserId = Array_WhereId(vall.Users, function(p) { return p.Nick == tempuser.Nick; } )[0];
 
                 if (isExistingUserId == -1 || isExistingUserId == undefined) {
                     vall.Users.push(tempuser);
@@ -429,19 +426,18 @@ function parse(self, ctx, msg)
         case "PART":
             msg.Parts[2] = msg.Parts[2].toLowerCase();
 
-            var part_usr = self.Channels[msg.Parts[2]].Users.Where(function(u) { return u.Nick == msg.From.Parts[0] }).First();
+            var part_usr = Array_Where(self.Channels[msg.Parts[2]].Users, function(u) { return u.Nick == msg.From.Parts[0] })[0];
 
             if (part_usr != undefined) {
-                self.Channels[msg.Parts[2]].Users.Remove
-                    (part_usr);
+                Array_Remove(self.Channels[msg.Parts[2]].Users, part_usr);
             }
 
             self.Events.emit('OnPart', self, msg);
 
             //if (msg.From.Parts[0] == self.Me.Nick)
-            if (self.IsThisMe(msg.From.Parts[0]))
+            if (self.IsThisMe(msg.From.Parts[0], "PART"))
             {
-                self.Channels.Remove(self.Channels.Where(function(u) { return u.Name == msg.Parts[2]; }).First());
+                delete self.Channels[Array_Where(self.Channels, function(u) { return u.Name == msg.Parts[2]; })[0]];
                 self.Events.emit('OnCloseChannelPart', self, msg);
             }
 
@@ -458,11 +454,11 @@ function parse(self, ctx, msg)
 
             for (var chn in self.Channels)
             {
-                var usr = self.Channels[chn].Users.Where(function(u) { return u.Nick == msg.From.Parts[0]; }).First();
+                var usr = Array_Where(self.Channels[chn].Users, function(u) { return u.Nick == msg.From.Parts[0]; })[0];
 
                 if (usr)
                 {
-                    self.Channels[chn].Users.Remove(usr);
+                    Array_Remove(self.Channels[chn].Users, usr);
                     channels.push(chn);
                 }
 
@@ -483,9 +479,9 @@ function parse(self, ctx, msg)
             // :from kick #channel nick :Reason (optional)
             msg.Parts[2] = msg.Parts[2].toLowerCase();
 
-            var kick_usr = self.Channels[msg.Parts[2]].Users.Where(function(u) { return u.Nick == msg.Parts[3]; }).First();
+            var kick_usr = Array_Where(self.Channels[msg.Parts[2]].Users, function(u) { return u.Nick == msg.Parts[3]; })[0];
             if (kick_usr != undefined) {
-                self.Channels[msg.Parts[2]].Users.Remove(kick_usr);
+                Array_Remove(self.Channels[msg.Parts[2]].Users, kick_usr);
             }
             self.Events.emit('OnKick', self, msg);
             break;
@@ -506,7 +502,7 @@ function parse(self, ctx, msg)
                 chn = chn.toLowerCase();
 
                 //var usr = self.Channels[chn].Users.Where(function(u) { return u.Nick == msg.From.Parts[0]; }).FirstOrDefault();
-                var usridx = self.Channels[chn].Users.WhereId(function(u) { return u.Nick == msg.From.Parts[0]; }).First();
+                var usridx = Array_WhereId(self.Channels[chn].Users, function(u) { return u.Nick == msg.From.Parts[0]; })[0];
 
                 if (usridx != -1)
                 {
@@ -582,12 +578,12 @@ function parse(self, ctx, msg)
                     mode.Character = self.Attributes["PREFIX_PREFIXES"][self.Attributes["PREFIX_MODES"].indexOf(mode.Character)];
                     msg.Parts[2] = msg.Parts[2].toLowerCase();
 
-                    var userid = self.Channels[msg.Parts[2].toLowerCase()].Users.WhereId(function(u) { return u.Nick == mode.Argument; }).First();
+                    var userid = Array_WhereId(self.Channels[msg.Parts[2].toLowerCase()].Users,function(u) { return u.Nick == mode.Argument; })[0];
 
                     if (mode.ModificationType == ModeModificationType.Removing)
                     {
                         var mode_remove_prefix = self.Channels[msg.Parts[2]].Users[userid].Modes.
-                            Where(function(m) { return m == mode.Character.toString(); }).First();
+                            Where(function(m) { return m == mode.Character.toString(); })[0];
 
                         if (mode_remove_prefix != undefined) {
                             self.Channels[msg.Parts[2]].Users[userid].Modes.
@@ -599,7 +595,7 @@ function parse(self, ctx, msg)
                     }
                     else
                     {
-                        var mode_add_prefix = self.Channels[msg.Parts[2]].Users[userid].Modes.Where(function(p) { return p.Character == mode.Character; } ).First();
+                        var mode_add_prefix = Array_Where(self.Channels[msg.Parts[2]].Users[userid].Modes, function(p) { return p.Character == mode.Character; } )[0];
 
                         if (mode_add_prefix == undefined) {
                             self.Channels[msg.Parts[2]].Users[userid].Modes.push(mode.Character.toString());
@@ -622,16 +618,16 @@ function parse(self, ctx, msg)
 
                     if (mode.ModificationType == ModeModificationType.Adding)
                     {
-                        if (self.Me.Modes.Where(function(m) { return m == mode.Character; }).First() == undefined) {
+                        if (Array_Where(self.Me.Modes, function(m) { return m == mode.Character; })[0] == undefined) {
                             self.Me.Modes.push(mode.Character.toString());
                         }
                         
                     }
                     else
                     {
-                        var me_mode_to_remove = self.Me.Modes.Where(function(m) { return m[0] == mode.Character; }).First();
+                        var me_mode_to_remove = Array_Where(self.Me.Modes,function(m) { return m[0] == mode.Character; })[0];
                         if (me_mode_to_remove != undefined) {
-                            self.Me.Modes.Remove(me_mode_to_remove);
+                            Array_Remove(self.Me.Modes, me_mode_to_remove);
                         }
                     }
                 }
@@ -642,8 +638,8 @@ function parse(self, ctx, msg)
                     mode.Type = ModeType.Channel;
                     if (mode.ModificationType == ModeModificationType.Adding)
                     {
-                        var mode_ban_add = self.Channels[msg.Parts[2]].Modes.Where(function (m) { return m.Character == mode.Character &&
-                                mode.Argument == m.Argument; }).First();
+                        var mode_ban_add = Array_Where(self.Channels[msg.Parts[2]].Modes, function (m) { return m.Character == mode.Character &&
+                                mode.Argument == m.Argument; })[0];
                         if (mode_ban_add == undefined) {
                             self.Channels[msg.Parts[2]].Modes.push(mode);
                         }
@@ -653,12 +649,11 @@ function parse(self, ctx, msg)
                         }
                     }
                     else {
-                        var modeToRemove = self.Channels[msg.Parts[2]].Modes.Where(function (m) { return m.Character == mode.Character &&
-                                mode.Argument == m.Argument; }).First();
+                        var modeToRemove = Array_Where(self.Channels[msg.Parts[2]].Modes, function (m) { return m.Character == mode.Character &&
+                                mode.Argument == m.Argument; })[0];
 
                         if (modeToRemove != undefined) {
-                            self.Channels[msg.Parts[2]].Modes.Remove
-                                (modeToRemove);
+                            Array_Remove(self.Channels[msg.Parts[2]].Modes, modeToRemove);
                         }
 
 
@@ -921,7 +916,7 @@ function parse(self, ctx, msg)
             }
 
             tempWhois.Modes = [];
-            tempWhois.Modes.push(msg.Parts[7] + " " + (msg.Parts.Count() > 8 ? msg.Parts[8] : ""));
+            tempWhois.Modes.push(msg.Parts[7] + " " + (msg.Parts.length > 8 ? msg.Parts[8] : ""));
 
             break;
         case "307": // :registered nick?
@@ -949,7 +944,7 @@ function parse(self, ctx, msg)
 
             msg.Parts[4] = msg.Parts[4].substring(1);
 
-            for (var i = 4; i < msg.Parts.Count(); i++)
+            for (var i = 4; i < msg.Parts.length; i++)
             {
                 // This channel doesn't represent a gui item
                 
