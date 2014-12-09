@@ -139,7 +139,11 @@ function Connection(inCtx, socket) {
     }
 
     this.Write = function(message) {
-        socketWrapper.write(message + "\r\n");
+        socketWrapper.write(message);
+    }
+
+    this.Socket = function() {
+        return socketWrapper;
     }
 }
 

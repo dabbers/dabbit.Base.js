@@ -44,6 +44,9 @@ function Channel(svr) {
         return this.Name;
     }
 
+    this.__defineGetter__("isChannel", function() {
+        return true;
+    });
 
 }
 
