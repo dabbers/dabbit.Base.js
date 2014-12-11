@@ -251,7 +251,6 @@ function parse(self, ctx, msg)
                 if (!value) {
                     value = ctx.CreateChannel(self);
                     value.Modes = [];
-                    value.Users = [];
                     value.Topic = new Topic();
 
                     //self.Channels[msg.Parts[2].toLowerCase()] = value;
