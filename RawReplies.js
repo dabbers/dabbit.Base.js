@@ -167,7 +167,7 @@
         ErrFileError_424 :424,
         ErrNoNicknameGiven_431 :431,                  // :No nickname given
         ErrErroneusNickname_432 :432,                  // <nickname> :Erroneus Nickname
-        ErrNickNameInUse_432 :433,                  // <nickname> :Nickname is already in use.
+        ErrNickNameInUse_433 :433,                  // <nickname> :Nickname is already in use.
         ErrNickCollision_436 :436,                  // <nickname> :Nickname collision KILL
         ErrUnAvailResource_437 :437,                  // <channel> :Cannot change nickname while banned on channel
         ErrNickTooFast_438 :438,                  // <nick> :Nick change too fast. Please wait <sec> seconds.                         (most)

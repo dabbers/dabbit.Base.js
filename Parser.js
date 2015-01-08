@@ -117,10 +117,10 @@ function parse(self, ctx, msg)
             {
                 pvm.To = new SourceEntity([msg.Parts[2]], SourceEntityType.Channel);
 
-                if (msg.Parts[3][1] == "\001")
+                if (pvm.Parts[3][1] == "\001")
                 {
-                    var firstLength = msg.Parts[3].substring(2).length + 1;  // length of ":\1WORD "
-                    msg.MessageLine = msg.MessageLine.substring(firstLength, msg.MessageLine.length - 1);
+                    var firstLength = pvm.Parts[3].substring(2).length + 1;  // length of ":\1WORD "
+                    pvm.MessageLine = pvm.MessageLine.substring(firstLength, pvm.MessageLine.length - 1);
                     self.Events.emit('OnChannelCtcp', self, pvm);
                 }
                 else
@@ -133,17 +133,17 @@ function parse(self, ctx, msg)
                 // A message is being sent to a non-channel which means it HAS to be going to us.
                 pvm.To = new SourceEntity(pvm.To.Parts, SourceEntityType.Client);
 
-                if (msg.Parts[3][1] == "\001")
+                if (pvm.Parts[3][1] == "\001")
                 {
                     // Remove ending \001
-                    if (msg.MessageLine[msg.MessageLine.Length - 1] == '\u0001')
-                    {
-                        var firstLength = msg.Parts[3].substring(2).length + 1; // length of ":\1WORD " 
+                    //if (msg.MessageLine[msg.MessageLine.Length - 1] == '\u0001')
+                    //{
+                   var firstLength = pvm.Parts[3].substring(2).length + 1; // length of ":\1WORD " 
 
-                        msg.MessageLine = msg.MessageLine.substring(9, msg.MessageLine.length - 1);
-                        var lastpart = msg.Parts[msg.Parts.length - 1];
-                        msg.Parts[msg.Parts.length - 1] = lastpart.substring(0, lastpart.length - 1);
-                    }
+                    pvm.MessageLine = pvm.MessageLine.substring(firstLength, pvm.MessageLine.length - 1);
+                    var lastpart = pvm.Parts[pvm.Parts.length - 1];
+                    pvm.Parts[pvm.Parts.length - 1] = lastpart.substring(0, lastpart.length - 1); 
+                    //}
 
                     self.Events.emit('OnQueryCtcp', self, pvm);
                 }
@@ -173,6 +173,70 @@ function parse(self, ctx, msg)
             {
                 // Check for a wallops message (+#channel)
                 pvm.Wall = msg.Parts[2][0].toString();
+                pvm.Parts[2] = msg.Parts[2].substring(1);
+
+                pvm.To = new SourceEntity([pvm.Parts[2]], SourceEntityType.Channel);
+            }
+
+            if (self.Attributes["CHANTYPES"].indexOf(pvm.Parts[2][0].toString()) != -1)
+            {
+                if (msg.Parts[3][1] == "\001")
+                {
+                    var firstLength = msg.Parts[3].substring(2).length + 1; // length of ":\1WORD " 
+                    pvm.MessageLine = msg.MessageLine.substring(firstLength, msg.MessageLine.length - 10);
+                    // CTCP Action
+                    self.Events.emit('OnChannelCtcpNotice', self, pvm);   
+                }
+                else
+                {
+                    self.Events.emit('OnChannelMessageNotice', self, pvm);
+                }
+            }
+            else
+            {
+                // A message is being sent to a non-channel which means it HAS to be going to us.
+                pvm.To = new SourceEntity(pvm.To.Parts, SourceEntityType.Client);
+
+                if (msg.Parts[3][1] == "\001")
+                {
+                    var firstLength = pvm.Parts[3].substring(2).length + 1; // length of ":\1WORD " 
+                    // Remove ending \001
+                    //if (pvm.MessageLine[msg.MessageLine.length - 1] == '\u0001')
+                    //{
+                    pvm.MessageLine = pvm.MessageLine.substring(firstLength, pvm.MessageLine.length - 1);
+                    var lastpart = pvm.Parts[pvm.Parts.length - 1];
+                    pvm.Parts[pvm.Parts.length - 1] = lastpart.substring(0, lastpart.length - 1);
+                    //}
+
+                    // CTCP Action
+                    self.Events.emit('OnQueryCtcpNotice', self, pvm);
+                }
+                else
+                {
+                    self.Events.emit('OnQueryMessageNotice', self, pvm);
+                }
+            }
+
+            self.Events.emit('OnNotice', self, pvm);
+            break;
+        // ///
+        // END NOTICE
+        // ///
+
+
+        // ***
+        // BEGIN NOTICE
+        // ***
+        case "NOTICE":
+            pvm = new Evnts.PrivmsgMessage(msg);
+
+            // We are parsing a message to a channel
+            pvm.To = new SourceEntity([msg.Parts[2]], SourceEntityType.Channel);
+
+            if (self.Attributes["STATUSMSG"].indexOf(msg.Parts[2][0].toString()) != -1)
+            {
+                // Check for a wallops message (+#channel)
+                pvm.Wall = msg.Parts[2][0].toString();
                 msg.Parts[2] = msg.Parts[2].substring(1);
 
                 pvm.To = new SourceEntity([msg.Parts[2]], SourceEntityType.Channel);
@@ -180,7 +244,7 @@ function parse(self, ctx, msg)
 
             if (self.Attributes["CHANTYPES"].indexOf(pvm.Parts[2][0].toString()) != -1)
             {
-                if (msg.Parts[3][1] == "\001")
+                if (msg.Parts[3][1] == "\u001")
                 {
                     var firstLength = msg.Parts[3].substring(2).length + 1; // length of ":\1WORD " 
                     msg.MessageLine = msg.MessageLine.substring(firstLength, msg.MessageLine.length - 10);
@@ -197,7 +261,7 @@ function parse(self, ctx, msg)
                 // A message is being sent to a non-channel which means it HAS to be going to us.
                 pvm.To = new SourceEntity(pvm.To.Parts, SourceEntityType.Client);
 
-                if (msg.Parts[3][1] == "\001")
+                if (msg.Parts[3][1] == "\u001")
                 {
                     var firstLength = msg.Parts[3].substring(2).length + 1; // length of ":\1WORD " 
                     // Remove ending \001
@@ -664,7 +728,8 @@ function parse(self, ctx, msg)
                 }
                 var modeMessage = new Evnts.ModeMessage(msg);
                 modeMessage.Mode = mode;
-
+                modeMessage.To.Type = (mode.Type == ModeType.Channel ? "Channel" : "Client");
+                
                 self.Events.emit('OnModeChange', self, modeMessage);
             }
 

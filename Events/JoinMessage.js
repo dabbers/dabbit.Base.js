@@ -24,7 +24,10 @@ function JoinMessage(old) // Message param
 
         this.Channel = old.Parts[2].toLowerCase();
     }
+
+    this.To = {"Parts":[this.Channel,"",""], "Type":"Channel"};
 }
+
 util.inherits(JoinMessage, Message);
 
 module.exports = JoinMessage;

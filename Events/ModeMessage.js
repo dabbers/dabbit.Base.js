@@ -10,6 +10,7 @@ function ModeMessage(old)
     this.Mode = {}; // Mode
 
     this.From = old.From;
+    this.To = {"Parts": [old.Parts[2], "", ""], "Type":""};
     this.Command = old.Command;
     this.MessageLine = old.MessageLine;
     this.Parts = old.Parts;
