@@ -115,7 +115,9 @@ function Server(ctx, me, connection) {
     this.Events.on('OnConnectionEstablished', function(svr, msg) {
         self.Connection.Write("WHOIS " + self.Me.Nick);
         whoisLibraryRequested.push(self.Me.Nick);
+    });
 
+    this.Events.on('005', function(svr, msg) {
         if (self.Attributes["NAMESX"]) {
             multiModes = true;
             self.Connection.Write("PROTOCTL NAMESX");

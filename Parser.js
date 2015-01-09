@@ -340,10 +340,9 @@ function parse(self, ctx, msg)
                     self.Channels[jm.Channel].Users.push(usr);
                     self.Channels[jm.Channel].Users.sort(sortuser);
                 }
-
-                self.Events.emit('OnJoin', self, jm);
-                
             }
+
+            self.Events.emit('OnJoin', self, jm);
             break;
         // ///
         // END JOIN
@@ -410,7 +409,7 @@ function parse(self, ctx, msg)
 
             vall = self.Channels[msg.Parts[4]];
 
-            // Could happen
+            // Could happen if we are inspecting a channel we aren't in.
             if (!vall)
             {
                 // We don't want to execute this
@@ -434,6 +433,8 @@ function parse(self, ctx, msg)
 
                 if (self.HostInNames) {
                     var nick = msg.Parts[i].split('!');
+                    
+                    // In case there is a disperity between setting the flag, and actually sending the command to enable the protocol change
                     if (nick.length > 1)
                     {
                         var identhost = nick[1].split('@');
