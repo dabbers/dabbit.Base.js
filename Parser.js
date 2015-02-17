@@ -293,6 +293,9 @@ function parse(self, ctx, msg)
         case "PING":
             self.Events.emit('OnPing', self, msg);
             break;
+        case "PONG":
+            self.Events.emit('OnPong', self, msg);
+            break;
         case "ERROR":
             self.Events.emit('OnError', self, msg);
             break;

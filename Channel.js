@@ -5,8 +5,6 @@ function Channel(svr) {
         throw "svr cannot be null";
     }
 
-    var Server = require("./Server");
-
     this.Name = "";
     this.Modes = [];
     this.Users = [];
