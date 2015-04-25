@@ -223,70 +223,6 @@ function parse(self, ctx, msg)
         // END NOTICE
         // ///
 
-
-        // ***
-        // BEGIN NOTICE
-        // ***
-        case "NOTICE":
-            pvm = new Evnts.PrivmsgMessage(msg);
-
-            // We are parsing a message to a channel
-            pvm.To = new SourceEntity([msg.Parts[2]], SourceEntityType.Channel);
-
-            if (self.Attributes["STATUSMSG"].indexOf(msg.Parts[2][0].toString()) != -1)
-            {
-                // Check for a wallops message (+#channel)
-                pvm.Wall = msg.Parts[2][0].toString();
-                msg.Parts[2] = msg.Parts[2].substring(1);
-
-                pvm.To = new SourceEntity([msg.Parts[2]], SourceEntityType.Channel);
-            }
-
-            if (self.Attributes["CHANTYPES"].indexOf(pvm.Parts[2][0].toString()) != -1)
-            {
-                if (msg.Parts[3][1] == "\u001")
-                {
-                    var firstLength = msg.Parts[3].substring(2).length + 1; // length of ":\1WORD " 
-                    msg.MessageLine = msg.MessageLine.substring(firstLength, msg.MessageLine.length - 10);
-                    // CTCP Action
-                    self.Events.emit('OnChannelCtcpNotice', self, pvm);   
-                }
-                else
-                {
-                    self.Events.emit('OnChannelMessageNotice', self, pvm);
-                }
-            }
-            else
-            {
-                // A message is being sent to a non-channel which means it HAS to be going to us.
-                pvm.To = new SourceEntity(pvm.To.Parts, SourceEntityType.Client);
-
-                if (msg.Parts[3][1] == "\u001")
-                {
-                    var firstLength = msg.Parts[3].substring(2).length + 1; // length of ":\1WORD " 
-                    // Remove ending \001
-                    if (msg.MessageLine[msg.MessageLine.length - 1] == '\u0001')
-                    {
-                        msg.MessageLine = msg.MessageLine.substring(firstLength, msg.MessageLine.length - 1);
-                        var lastpart = msg.Parts[msg.Parts.length - 1];
-                        msg.Parts[msg.Parts.length - 1] = lastpart.substring(0, lastpart.length - 1);
-                    }
-
-                    // CTCP Action
-                    self.Events.emit('OnQueryCtcpNotice', self, pvm);
-                }
-                else
-                {
-                    self.Events.emit('OnQueryMessageNotice', self, pvm);
-                }
-            }
-
-            self.Events.emit('OnNotice', self, pvm);
-            break;
-        // ///
-        // END NOTICE
-        // ///
-
         // ***
         // BEGIN PING/ERROR
         // ***
@@ -319,8 +255,6 @@ function parse(self, ctx, msg)
                     value = ctx.CreateChannel(self);
                     value.Modes = [];
                     value.Topic = new Topic();
-
-                    //self.Channels[msg.Parts[2].toLowerCase()] = value;
                 }
 
                 value.Name = msg.Parts[2];
@@ -343,6 +277,7 @@ function parse(self, ctx, msg)
                     self.Channels[jm.Channel].Users.push(usr);
                     self.Channels[jm.Channel].Users.sort(sortuser);
                 }
+                
             }
 
             self.Events.emit('OnJoin', self, jm);
@@ -707,6 +642,7 @@ function parse(self, ctx, msg)
                     {
                         var mode_ban_add = Array_Where(self.Channels[msg.Parts[2]].Modes, function (m) { return m.Character == mode.Character &&
                                 mode.Argument == m.Argument; })[0];
+
                         if (mode_ban_add == undefined) {
                             self.Channels[msg.Parts[2]].Modes.push(mode);
                         }
@@ -733,7 +669,7 @@ function parse(self, ctx, msg)
                 var modeMessage = new Evnts.ModeMessage(msg);
                 modeMessage.Mode = mode;
                 modeMessage.To.Type = (mode.Type == ModeType.Channel ? "Channel" : "Client");
-                
+
                 self.Events.emit('OnModeChange', self, modeMessage);
             }
 
@@ -1079,6 +1015,18 @@ function parse(self, ctx, msg)
             tempWhois.Attributes.push(msg.MessageLine);
 
             break;
+        case "355": // 335 DaBot` DaBot` :is a ☻Bot☻ on Gamer Galaxy'
+            // Either never done a whois before or recycle old whois result
+            // Meaning the whois is not thread safe.
+            if (!tempWhois || tempWhois.Nick != msg.Parts[3])
+            {
+                tempWhois = ctx.CreateUser();
+                tempWhois.Nick = msg.Parts[3];
+            }
+
+            tempWhois.Attributes.push(msg.MessageLine);
+
+            break;
         case "317": // idle time
             // Either never done a whois before or recycle old whois result
             // Meaning the whois is not thread safe.
@@ -1111,6 +1059,7 @@ function parse(self, ctx, msg)
             var whomsg = new Evnts.WhoisMessage(msg);
             whomsg.Who = tempWhois;
             self.Events.emit('OnWhoIs', self, whomsg);
+            self.Events.emit('OnWhois', self, whomsg);
 
             tempWhois = null;
             break;
