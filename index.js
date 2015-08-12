@@ -9,8 +9,7 @@ var projectRoot = path.dirname(process.argv[1]);
 //require(path.join(projectRoot, "System", "Javascript", "g_ObjectExtensions"));
 
 
-function requireall(basePath)
-{
+function requireall(basePath) {
 	var curdir = path.join(__dirname, basePath, "/");
 	
 	var tmpexport = {};

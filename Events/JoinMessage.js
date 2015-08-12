@@ -27,7 +27,6 @@ function JoinMessage(old) // Message param
 
     this.To = {"Parts":[this.Channel,"",""], "Type":"Channel"};
 }
-
 util.inherits(JoinMessage, Message);
 
 module.exports = JoinMessage;

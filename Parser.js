@@ -584,12 +584,11 @@ function parse(self, ctx, msg)
 
                     if (mode.ModificationType == ModeModificationType.Removing)
                     {
-                        var mode_remove_prefix = self.Channels[msg.Parts[2]].Users[userid].Modes.
-                            Where(function(m) { return m == mode.Character.toString(); })[0];
+                        var mode_remove_prefix = Array_Where(self.Channels[msg.Parts[2]].Users[userid].Modes,
+                            function(m) { return m == mode.Character.toString(); })[0];
 
                         if (mode_remove_prefix != undefined) {
-                            self.Channels[msg.Parts[2]].Users[userid].Modes.
-                                Remove(mode_remove_prefix);
+                            Array_Remove(self.Channels[msg.Parts[2]].Users[userid].Modes, mode_remove_prefix);
                         }
 
 
