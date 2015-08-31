@@ -100,7 +100,7 @@ function Server(ctx, me, connection) {
         // remove leading : so we can do a direct check
         msg.Parts[4] = msg.Parts[4].substring(1);
 
-        for (var i = 4; i < msg.Parts.Count(); i++)
+        for (var i = 4; i < msg.Parts.length; i++)
         {
             if (msg.Parts[i] == "multi-prefix")
             {
