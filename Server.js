@@ -130,7 +130,7 @@ function Server(ctx, me, connection) {
 
     this.Events.on('OnWhois', function(svr, msg) { 
 
-        whoisLibraryRequested.Remove(tempWhois.Nick);
+        //whoisLibraryRequested.Remove(tempWhois.Nick);
     });
 
     this.Events.on('OnPing', function(svr, msg) {
