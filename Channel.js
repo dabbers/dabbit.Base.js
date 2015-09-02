@@ -1,10 +1,6 @@
 ﻿var Topic = require("./Topic");
 
-function Channel(svr) {
-    if (!svr) {
-        throw "svr cannot be null";
-    }
-
+function Channel() {
     this.Name = "";
     this.Modes = [];
     this.Users = [];
@@ -19,11 +15,6 @@ function Channel(svr) {
     // Public getter for Created (datetime)
     this.__defineGetter__("Created", function() {
         return created;
-    });
-    
-
-    this.__defineGetter__("ServerOf", function() {
-        return svr;
     });
 
     this.__defineGetter__("ChannelLoaded", function() {
