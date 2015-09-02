@@ -14,7 +14,8 @@ function JoinMessage(old) // Message param
     this.Parts = old.Parts;
     this.RawLine = old.RawLine;
     this.Timestamp = old.Timestamp;
-
+    this.Chanobj = {};
+    
     if (this.From.Type == SourceEntityType.Client)
     {
         if (old.Parts[2][0] == ':')

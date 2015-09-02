@@ -261,6 +261,7 @@ function parse(self, ctx, msg)
                 value.Display = value.Name;
 
                 self.Channels[jm.Channel] = value;
+                jm.Chanobj = value;
 
                 self.Events.emit('OnNewChannelJoin', self, jm);
             }
@@ -279,6 +280,7 @@ function parse(self, ctx, msg)
                 }
                 
             }
+            jm.Chanobj = value;
 
             self.Events.emit('OnJoin', self, jm);
             break;
@@ -433,7 +435,6 @@ function parse(self, ctx, msg)
             if (part_usr != undefined) {
                 Array_Remove(self.Channels[msg.Parts[2]].Users, part_usr);
             }
-
             self.Events.emit('OnPart', self, msg);
 
             //if (msg.From.Parts[0] == self.Me.Nick)
@@ -580,7 +581,7 @@ function parse(self, ctx, msg)
                     mode.Character = self.Attributes["PREFIX_PREFIXES"][self.Attributes["PREFIX_MODES"].indexOf(mode.Character)];
                     msg.Parts[2] = msg.Parts[2].toLowerCase();
 
-                    var userid = Array_WhereId(self.Channels[msg.Parts[2].toLowerCase()].Users,function(u) { return u.Nick == mode.Argument; })[0];
+                    var userid = Array_WhereId(self.Channels[msg.Parts[2]].Users,function(u) { return u.Nick == mode.Argument; })[0];
 
                     if (mode.ModificationType == ModeModificationType.Removing)
                     {
@@ -611,7 +612,7 @@ function parse(self, ctx, msg)
                         self.Events.emit('OnAddPrefix', self, msg);
                     }
 
-                    self.Channels[msg.Parts[2].toLowerCase()].Users.sort(sortuser);
+                    self.Channels[msg.Parts[2]].Users.sort(sortuser);
                 }
                 else if (self.IsThisMe(msg.Parts[2])) // else if (msg.Parts[2] == self.Me.Nick)
                 {
@@ -668,7 +669,7 @@ function parse(self, ctx, msg)
                 var modeMessage = new Evnts.ModeMessage(msg);
                 modeMessage.Mode = mode;
                 modeMessage.To.Type = (mode.Type == ModeType.Channel ? "Channel" : "Client");
-
+                modeMessage.Chanobj = self.Channels[msg.Parts[2]];
                 self.Events.emit('OnModeChange', self, modeMessage);
             }
 
