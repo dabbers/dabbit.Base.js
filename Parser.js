@@ -322,7 +322,7 @@ function parse(self, ctx, msg)
                     mode.Argument = "";
                 }
 
-                if (Array_Where(chnl.Modes, function(p) { p.Character == modes[i]}).length == 0) {
+                if (Array_Where(chnl.Modes, function(p) { return p.Character == modes[i]}).length == 0) {
                     mode.Character = modes[i];
                     mode.Type = ModeType.Channel;
                     chnl.Modes.push(mode);
