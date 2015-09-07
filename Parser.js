@@ -748,6 +748,22 @@ function parse(self, ctx, msg)
         // END 333 Channel Topic set by and when (on join)
         // ///
 
+
+        case "TOPIC": // :from TOPIC #channel :Topic
+            msg.Parts[2] = msg.Parts[2].toLowerCase();
+
+            var tmpchan2pic = self.Channels[msg.Parts[2]];
+
+            if (tmpchan2pic)
+            {
+                // update channel
+                tmpchan2pic.Topic.Display = msg.MessageLine;
+                tmpchan2pic.Topic.SetBy = msg.From.Parts[0];
+            }
+
+            self.Events.emit('OnTopic', self, msg);
+
+            break;
         // ***
         // BEGIN 004
         // ***
