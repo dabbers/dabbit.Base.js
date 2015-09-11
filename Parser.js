@@ -92,7 +92,7 @@ function parse(self, ctx, msg)
 
     if (!isNaN(msg.Command))
     {
-        self.Events.emit(msg.Command, self, msg);
+        self.Events.emit("Raw" + msg.Command, self, msg);
     }
 
 
@@ -679,23 +679,6 @@ function parse(self, ctx, msg)
         // ///
 
         // ***
-        // BEGIN 366 End of /Names List
-        // ***
-        case "366": // End of /names list
-
-            var jm_ = new Evnts.JoinMessage(msg);
-            jm_.Channel = msg.Parts[3].toLowerCase();
-
-            if (self.Channels[jm_.Channel].ChannelLoaded)
-            {
-                self.Events.emit('OnNewChannelJoin', self, jm_);
-            }
-            break;
-        // ///
-        // END 366 End of /Names List
-        // ///
-
-        // ***
         // BEGIN 332 Channel Topic (On Join)
         // ***
         case "332":
@@ -1133,6 +1116,12 @@ function parse(self, ctx, msg)
             self.Events.emit('OnUnhandledEvent', self, msg);
             break;
 
+    }
+
+
+    if (!isNaN(msg.Command))
+    {
+        self.Events.emit(msg.Command, self, msg);
     }
 }
 
