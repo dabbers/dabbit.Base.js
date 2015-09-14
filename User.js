@@ -6,9 +6,9 @@ function User(se) {
 
     this.Host = "";
 
-    this.IdentifiedAs = "";
+    //this.IdentifiedAs = "";
     this.Modes = []; // Modes
-    this.Channels = []; //Channel
+    //this.Channels = []; //Channel
 
     this.Name = "";
 
@@ -16,12 +16,12 @@ function User(se) {
         return (this.Modes.length > 0 ? this.Modes[0] : "") + this.Nick;
     });
 
-    this.IrcOp = false;
-    this.Identified = false;
-    this.Server = "";
-    this.IdleTime = 0;
+    //this.IrcOp = false;
+    //this.Identified = false;
+    //this.Server = "";
+    //this.IdleTime = 0;
 
-    this.SignedOn = new Date();
+    //this.SignedOn = new Date();
 
     this.Attributes = []; // String
 

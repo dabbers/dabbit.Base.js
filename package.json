@@ -1,6 +1,6 @@
 {
   "name": "dabbit.base",
-  "version": "0.6.0",
+  "version": "0.6.8",
   "description": "A base IRC parsing and information storage library. Emits callbacks per event.",
   "main": "index.js",
   "scripts": {

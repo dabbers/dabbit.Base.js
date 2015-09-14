@@ -244,6 +244,7 @@ function parse(self, ctx, msg)
         // ***
         case "JOIN":
             var jm = new Evnts.JoinMessage(msg);
+            var index = 0;
 
             //if (msg.From.Parts[0] == self.Me.Nick)
             if (self.IsThisMe(msg.From.Parts[0]))
@@ -277,10 +278,13 @@ function parse(self, ctx, msg)
                 if (Array_Where(self.Channels[jm.Channel].Users, function(p) { return p.Nick == jm.From.Parts[0];}).length == 0) {
                     self.Channels[jm.Channel].Users.push(usr);
                     self.Channels[jm.Channel].Users.sort(sortuser);
+
+                    for(index = 0; self.Channels[jm.Channel].Users[index].Nick != usr.Nick; index++);
                 }
                 
             }
             jm.Chanobj = value;
+            jm.UserIndex = index;
 
             self.Events.emit('OnJoin', self, jm);
             break;
@@ -457,12 +461,13 @@ function parse(self, ctx, msg)
 
             for (var chn in self.Channels)
             {
-                var usr = Array_Where(self.Channels[chn].Users, function(u) { return u.Nick == msg.From.Parts[0]; })[0];
+                //var usr = Array_Where(self.Channels[chn].Users, function(u) { return u.Nick == msg.From.Parts[0]; })[0];
+                var usridx = Array_WhereId(self.Channels[chn].Users, function (u) { return u.Nick == msg.From.Parts[0]; })[0];
 
-                if (usr)
+                if (usridx != -1)
                 {
-                    Array_Remove(self.Channels[chn].Users, usr);
-                    channels.push(chn);
+                    Array_Remove(self.Channels[chn].Users, self.Channels[chn].Users[usridx]);
+                    channels.push({ "channel": chn, "before": usridx });
                 }
 
             }
@@ -482,10 +487,13 @@ function parse(self, ctx, msg)
             // :from kick #channel nick :Reason (optional)
             msg.Parts[2] = msg.Parts[2].toLowerCase();
 
-            var kick_usr = Array_Where(self.Channels[msg.Parts[2]].Users, function(u) { return u.Nick == msg.Parts[3]; })[0];
-            if (kick_usr != undefined) {
-                Array_Remove(self.Channels[msg.Parts[2]].Users, kick_usr);
+            //var kick_usr = Array_Where(self.Channels[msg.Parts[2]].Users, function(u) { return u.Nick == msg.Parts[3]; })[0];
+            var kick_usr = Array_WhereId(self.Channels[msg.Parts[2]].Users, function (u) { return u.Nick == msg.Parts[3]; })[0];
+
+            if (kick_usr != -1 && kick_usr != undefined) {
+                Array_Remove(self.Channels[msg.Parts[2]].Users, self.Channels[msg.Parts[2]].Users[kick_usr]);
             }
+            msg.Delta = kick_usr;
             self.Events.emit('OnKick', self, msg);
             break;
         // ///
@@ -535,6 +543,7 @@ function parse(self, ctx, msg)
             var modesstring = msg.Parts[3];
             var paramsindex = 4;
             var adding = true;
+            var isChannel = true;
 
             var prefixz = self.Attributes["PREFIX_PREFIXES"];
             var start = modesstring[0] == ':' ? 1 : 0;
@@ -590,9 +599,12 @@ function parse(self, ctx, msg)
 
                         if (mode_remove_prefix != undefined) {
                             Array_Remove(self.Channels[msg.Parts[2]].Users[userid].Modes, mode_remove_prefix);
+                            self.Channels[msg.Parts[2]].Users.sort(sortuser);
                         }
-
-
+ 
+                        var useridAfter = Array_WhereId(self.Channels[msg.Parts[2]].Users, function (u) { return u.Nick == mode.Argument; })[0];
+                        msg.Delta = { "before": userid, "after": useridAfter, "user":self.Channels[msg.Parts[2]].Users[useridAfter] };
+ 
                         self.Events.emit('OnRemovePrefix', self, msg);
                     }
                     else
@@ -601,22 +613,24 @@ function parse(self, ctx, msg)
 
                         if (mode_add_prefix == undefined) {
                             self.Channels[msg.Parts[2]].Users[userid].Modes.push(mode.Character.toString());
-
+ 
                             self.Channels[msg.Parts[2]].Users[userid].Modes.sort(function(s1, s2)
                             {
                                 return prefixz.indexOf(s1[0]) - (prefixz.indexOf(s2[0]));
                             });
+                            self.Channels[msg.Parts[2]].Users.sort(sortuser);
                         }
-
-
+ 
+                        var useridAfter = Array_WhereId(self.Channels[msg.Parts[2]].Users, function (u) { return u.Nick == mode.Argument; })[0];
+                        msg.Delta = { "before": userid, "after": useridAfter, "user": self.Channels[msg.Parts[2]].Users[useridAfter]  };
+ 
                         self.Events.emit('OnAddPrefix', self, msg);
                     }
-
-                    self.Channels[msg.Parts[2]].Users.sort(sortuser);
                 }
                 else if (self.IsThisMe(msg.Parts[2])) // else if (msg.Parts[2] == self.Me.Nick)
                 {
                     mode.Type = ModeType.UMode;
+                    isChannel = false;
 
                     if (mode.ModificationType == ModeModificationType.Adding)
                     {
@@ -672,7 +686,8 @@ function parse(self, ctx, msg)
                 modeMessage.Chanobj = self.Channels[msg.Parts[2]];
                 self.Events.emit('OnModeChange', self, modeMessage);
             }
-
+            msg.Type = (isChannel ? "Channel" : "UMode");
+            self.Events.emit("OnMode", self, msg);
             break;
         // ///
         // END MODE
