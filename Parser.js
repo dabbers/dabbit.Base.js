@@ -461,13 +461,12 @@ function parse(self, ctx, msg)
 
             for (var chn in self.Channels)
             {
-                //var usr = Array_Where(self.Channels[chn].Users, function(u) { return u.Nick == msg.From.Parts[0]; })[0];
-                var usridx = Array_WhereId(self.Channels[chn].Users, function (u) { return u.Nick == msg.From.Parts[0]; })[0];
+                var usr = Array_WhereId(self.Channels[chn].Users, function(u) { return u.Nick == msg.From.Parts[0]; })[0];
 
-                if (usridx != -1)
+                if (usr && usr != -1) 
                 {
-                    Array_Remove(self.Channels[chn].Users, self.Channels[chn].Users[usridx]);
-                    channels.push({ "channel": chn, "before": usridx });
+                    Array_Remove(self.Channels[chn].Users, usr);
+                    channels.push({ "channel": chn, "before": usr });
                 }
 
             }
@@ -510,23 +509,29 @@ function parse(self, ctx, msg)
 
             for (var chn in self.Channels)
             {
-                chn = chn.toLowerCase();
+                
 
                 //var usr = self.Channels[chn].Users.Where(function(u) { return u.Nick == msg.From.Parts[0]; }).FirstOrDefault();
-                var usridx = Array_WhereId(self.Channels[chn].Users, function(u) { return u.Nick == msg.From.Parts[0]; })[0];
+                var usridx = Array_WhereId(self.Channels[chn.toLowerCase()].Users, function(u) { return u.Nick == msg.From.Parts[0]; })[0];
+                var chnnl = { "channel": chn.toLowerCase(), "before": usridx, "after": 0 };
 
                 if (usridx != -1)
                 {
                     self.Channels[chn].Users[usridx].Nick = nickmsg.To;
                     self.Channels[chn].Users.sort(sortuser);
-                    nickchannels.push(chn);
+
+                    var usridx2 = Array_WhereId(self.Channels[chn].Users, function (u) { return u.Nick == nickmsg.To; })[0];
+                    
+                    chnnl.after = usridx2;
+
+                    nickchannels.push(chnnl);
                 }
             }
 
             //if (nickmsg.From.Parts[0] == self.Me.Nick)
             if (self.IsThisMe(msg.From.Parts[0]))
             {
-                self.Me.Nick = nickmsg.To.substring(1);
+                self.Me.Nick = nickmsg.To;
             }
 
             nickmsg.Channels = nickchannels;
