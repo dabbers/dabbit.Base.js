@@ -1124,7 +1124,7 @@ function parse(self, ctx, msg)
             tempList.push(le);
             break;
         case "323":
-            var lm = new EventListMessage(msg);
+            var lm = new Evnts.ListMessage(msg);
 
             lm.Entries = tempList;
             self.Events.emit('OnList', self, lm);

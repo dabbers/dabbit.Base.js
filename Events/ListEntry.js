@@ -5,4 +5,4 @@ function ListEntry()
     this.Users = 0;
     this.Topic = "";
 }
-module.export = ListEntry;
+module.exports = ListEntry;
